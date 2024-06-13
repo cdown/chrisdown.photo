@@ -1,0 +1,5 @@
+#!/bin/bash -ex
+
+./generate.py
+s3cmd sync output.html s3://chrisdown.photo/index.html
+chrisdown.name-invalidate
