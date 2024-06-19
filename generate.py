@@ -30,37 +30,62 @@ def save_cache(cache, file_path):
         json.dump(cache, cache_file, indent=4)
 
 
-def get_flickr_image_url(flickr_url, flickr_cache):
-    if flickr_url in flickr_cache:
-        print(f"Using cached URL for {flickr_url}")
-        return flickr_cache[flickr_url]
-
-    print(f"Fetching image URL for {flickr_url}")
-    response = requests.get(f"{flickr_url}/sizes/l/")
+def get_flickr_image_url(flickr_url, size):
+    print(f"Fetching image URL for {flickr_url} size {size}")
+    response = requests.get(f"{flickr_url}/sizes/{size}/")
     soup = BeautifulSoup(response.text, "html.parser")
     img_tag = soup.find("img", {"src": lambda x: x and "live.staticflickr.com" in x})
 
     if img_tag:
-        img_url = img_tag["src"]
-        flickr_cache[flickr_url] = img_url
-        return img_url
+        return img_tag["src"]
 
     return None
+
+
+def find_large_enough_flickr_image_url(flickr_url, flickr_cache):
+    if flickr_url in flickr_cache:
+        print(f"Using cached URL for {flickr_url}")
+        return flickr_cache[flickr_url]
+
+    # Smallest to largest that may give >= min_width.
+    sizes = ["l", "h", "k", "o"]
+
+    # On desjtop, the layout has a body width of 1400px with 10px border on
+    # each side, resulting in 1380px usable width. For a two-column layout,
+    # each column should be half of 1380px, which is 690px. Accounting for an
+    # 8px gap on each side of a column due to 16px column-gap, the required
+    # image width is # 690 - 8 = 682px.
+    #
+    # For a single column layout (e.g., on mobile), the width requirement is
+    # 900px minus some padding and scrollbar, leading to a practical minimum
+    # width requirement of 880px to ensure quality display in all layouts.
+    min_width = 880
+
+    for size in sizes:
+        img_url = get_flickr_image_url(flickr_url, size)
+        if img_url:
+            response = requests.head(img_url)
+            if 'imagewidth' in response.headers:
+                width = int(response.headers['imagewidth'])
+                if width >= min_width:
+                    flickr_cache[flickr_url] = img_url
+                    return img_url
+
+    raise ValueError("No images are big enough on Flickr")
 
 
 def generate_gallery_items_html(content, flickr_cache):
     gallery_items_html = ""
     for item in content["items"]:
         if "flickr" in item:
-            img_url = get_flickr_image_url(item["flickr"], flickr_cache)
-            if img_url:
-                gallery_items_html += f"""
-                <div class="gallery-item">
-                    <a href="{item['flickr']}">
-                        <img src="{img_url}" alt="" class="gallery-image">
-                    </a>
-                </div>
-                """
+            img_url = find_large_enough_flickr_image_url(item["flickr"], flickr_cache)
+            gallery_items_html += f"""
+            <div class="gallery-item">
+                <a href="{item['flickr']}">
+                    <img src="{img_url}" alt="" class="gallery-image">
+                </a>
+            </div>
+            """
         if "text" in item:
             gallery_items_html += f"""
             <div class="gallery-item">
