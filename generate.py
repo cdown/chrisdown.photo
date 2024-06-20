@@ -7,11 +7,6 @@ import json
 import os
 
 
-def load_template(file_path):
-    with open(file_path, "r") as file:
-        return file.read()
-
-
 def load_cache(file_path):
     try:
         with open(file_path, "r") as cache_file:
@@ -91,25 +86,25 @@ def generate_gallery_items_html(content, flickr_cache):
     return gallery_items_html
 
 
-def render_html(template, gallery_items_html, output_path):
-    html_output = template.replace("{{ gallery_items }}", gallery_items_html)
-    with open(output_path, "w") as file:
-        file.write(html_output)
+def render_html(template_file, gallery_items_html, output_path):
+    with open(output_path, "w") as output_file:
+        for line in template_file:
+            output_file.write(line.replace("{{ gallery_items }}", gallery_items_html))
 
 
 def main():
     with open("content.yaml", "r") as content_file:
         content = yaml.safe_load(content_file)
 
-    template = load_template("template.html")
-    flickr_cache = load_cache("flickr_cache.json")
+    with open("template.html", "r") as template_file:
+        flickr_cache = load_cache("flickr_cache.json")
 
-    gallery_items_html = generate_gallery_items_html(content, flickr_cache)
-    render_html(template, gallery_items_html, "output.html")
+        gallery_items_html = generate_gallery_items_html(content, flickr_cache)
+        render_html(template_file, gallery_items_html, "output.html")
 
-    save_cache(flickr_cache, "flickr_cache.json")
-    print("Webpage generation complete. Output saved to output.html.")
-    print("Cache saved to flickr_cache.json.")
+        save_cache(flickr_cache, "flickr_cache.json")
+        print("Webpage generation complete. Output saved to output.html.")
+        print("Cache saved to flickr_cache.json.")
 
 
 if __name__ == "__main__":
