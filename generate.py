@@ -49,7 +49,7 @@ def find_large_enough_flickr_image_data(flickr_url, flickr_cache):
         )
 
     # Smallest to largest that may give >= min_width.
-    sizes = ["l", "h", "k", "o"]
+    sizes = ["c", "l", "h", "k", "o"]
 
     # On desjtop, the layout has a body width of 1400px with 10px border on
     # each side, resulting in 1380px usable width. For a two-column layout,
@@ -58,9 +58,9 @@ def find_large_enough_flickr_image_data(flickr_url, flickr_cache):
     # image width is # 690 - 8 = 682px.
     #
     # For a single column layout (e.g., on mobile), the width requirement is
-    # 900px minus some padding and scrollbar, leading to a practical minimum
-    # width requirement of 880px to ensure quality display in all layouts.
-    min_width = 880
+    # 820px minus 10px padding either side, leading to a practical minimum
+    # width requirement of 800px to ensure quality display in all layouts.
+    min_width = 800
 
     for size in sizes:
         image_data = get_flickr_image_data(flickr_url, size)
