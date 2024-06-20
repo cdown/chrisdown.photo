@@ -34,7 +34,7 @@ def get_flickr_image_url(flickr_url, size):
     print(f"Fetching image URL for {flickr_url} size {size}")
     response = requests.get(f"{flickr_url}/sizes/{size}/")
     html = HTMLParser(response.text)
-    img_tag = html.css_first('img[src*="live.staticflickr.com"]')
+    img_tag = html.css_first('div#allsizes-photo > img[src*="live.staticflickr.com"]')
 
     if img_tag:
         return img_tag.attributes['src']
