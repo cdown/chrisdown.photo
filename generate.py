@@ -3,7 +3,6 @@
 import yaml
 import requests
 from bs4 import BeautifulSoup
-from jinja2 import Template
 import json
 import os
 
@@ -15,7 +14,7 @@ def load_yaml(file_path):
 
 def load_template(file_path):
     with open(file_path, "r") as file:
-        return Template(file.read())
+        return file.read()
 
 
 def load_cache(file_path):
@@ -79,24 +78,25 @@ def generate_gallery_items_html(content, flickr_cache):
     for item in content["items"]:
         if "flickr" in item:
             img_url = find_large_enough_flickr_image_url(item["flickr"], flickr_cache)
-            gallery_items_html += f"""
-            <div class="gallery-item">
-                <a href="{item['flickr']}">
-                    <img src="{img_url}" alt="" class="gallery-image">
-                </a>
-            </div>
-            """
+            gallery_items_html += (
+                '<div class="gallery-item">'
+                f'<a href="{item["flickr"]}">'
+                f'<img src="{img_url}" alt="" class="gallery-image">'
+                "</a>"
+                "</div>"
+            )
         if "text" in item:
-            gallery_items_html += f"""
-            <div class="gallery-item">
-                {"<p class='gallery-text'>" + "</p><p class='gallery-text'>".join(item['text']) + "</p>"}
-            </div>
-            """
+            text_html = "</p><p class='gallery-text'>".join(item["text"])
+            gallery_items_html += (
+                '<div class="gallery-item">'
+                f"<p class='gallery-text'>{text_html}</p>"
+                "</div>"
+            )
     return gallery_items_html
 
 
 def render_html(template, gallery_items_html, output_path):
-    html_output = template.render(gallery_items=gallery_items_html)
+    html_output = template.replace("{{ gallery_items }}", gallery_items_html)
     with open(output_path, "w") as file:
         file.write(html_output)
 
