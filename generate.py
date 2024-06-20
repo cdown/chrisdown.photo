@@ -7,11 +7,6 @@ import json
 import os
 
 
-def load_yaml(file_path):
-    with open(file_path, "r") as file:
-        return yaml.safe_load(file)
-
-
 def load_template(file_path):
     with open(file_path, "r") as file:
         return file.read()
@@ -103,7 +98,9 @@ def render_html(template, gallery_items_html, output_path):
 
 
 def main():
-    content = load_yaml("content.yaml")
+    with open("content.yaml", "r") as content_file:
+        content = yaml.safe_load(content_file)
+
     template = load_template("template.html")
     flickr_cache = load_cache("flickr_cache.json")
 
