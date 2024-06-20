@@ -2,7 +2,7 @@
 
 import yaml
 import requests
-from bs4 import BeautifulSoup
+from selectolax.parser import HTMLParser
 import json
 import os
 
@@ -33,11 +33,11 @@ def save_cache(cache, file_path):
 def get_flickr_image_url(flickr_url, size):
     print(f"Fetching image URL for {flickr_url} size {size}")
     response = requests.get(f"{flickr_url}/sizes/{size}/")
-    soup = BeautifulSoup(response.text, "html.parser")
-    img_tag = soup.find("img", {"src": lambda x: x and "live.staticflickr.com" in x})
+    html = HTMLParser(response.text)
+    img_tag = html.css_first('img[src*="live.staticflickr.com"]')
 
     if img_tag:
-        return img_tag["src"]
+        return img_tag.attributes['src']
 
     return None
 
