@@ -5,6 +5,9 @@ import requests
 from selectolax.parser import HTMLParser
 import json
 import os
+from collections import namedtuple
+
+FlickrImageData = namedtuple("FlickrImageData", ["url", "title"])
 
 
 def load_cache(file_path):
@@ -20,22 +23,30 @@ def save_cache(cache, file_path):
         json.dump(cache, cache_file, indent=4)
 
 
-def get_flickr_image_url(flickr_url, size):
-    print(f"Fetching image URL for {flickr_url} size {size}")
+def get_flickr_image_data(flickr_url, size):
+    print(f"Fetching image data for {flickr_url} size {size}")
     response = requests.get(f"{flickr_url}/sizes/{size}/")
     html = HTMLParser(response.text)
     img_tag = html.css_first('div#allsizes-photo > img[src*="live.staticflickr.com"]')
+    meta_title_tag = html.css_first('meta[name="title"]')
 
-    if img_tag:
-        return img_tag.attributes["src"]
+    if not img_tag:
+        raise ValueError(f"Image tag not found for {flickr_url} size {size}")
 
-    return None
+    if not meta_title_tag:
+        raise ValueError(f"Meta title tag not found for {flickr_url}")
+
+    return FlickrImageData(
+        url=img_tag.attributes["src"], title=meta_title_tag.attributes["content"]
+    )
 
 
-def find_large_enough_flickr_image_url(flickr_url, flickr_cache):
+def find_large_enough_flickr_image_data(flickr_url, flickr_cache):
     if flickr_url in flickr_cache:
-        print(f"Using cached URL for {flickr_url}")
-        return flickr_cache[flickr_url]
+        print(f"Using cached data for {flickr_url}")
+        return FlickrImageData(
+            url=flickr_cache[flickr_url]["url"], title=flickr_cache[flickr_url]["title"]
+        )
 
     # Smallest to largest that may give >= min_width.
     sizes = ["l", "h", "k", "o"]
@@ -52,14 +63,16 @@ def find_large_enough_flickr_image_url(flickr_url, flickr_cache):
     min_width = 880
 
     for size in sizes:
-        img_url = get_flickr_image_url(flickr_url, size)
-        if img_url:
-            response = requests.head(img_url)
-            if "imagewidth" in response.headers:
-                width = int(response.headers["imagewidth"])
-                if width >= min_width:
-                    flickr_cache[flickr_url] = img_url
-                    return img_url
+        image_data = get_flickr_image_data(flickr_url, size)
+        response = requests.head(image_data.url)
+        if "imagewidth" in response.headers:
+            width = int(response.headers["imagewidth"])
+            if width >= min_width:
+                flickr_cache[flickr_url] = {
+                    "url": image_data.url,
+                    "title": image_data.title,
+                }
+                return image_data
 
     raise ValueError("No images are big enough on Flickr")
 
@@ -68,11 +81,13 @@ def generate_gallery_items_html(content, flickr_cache):
     gallery_items_html = ""
     for item in content["items"]:
         if "flickr" in item:
-            img_url = find_large_enough_flickr_image_url(item["flickr"], flickr_cache)
+            image_data = find_large_enough_flickr_image_data(
+                item["flickr"], flickr_cache
+            )
             gallery_items_html += (
                 '<div class="gallery-item">'
                 f'<a href="{item["flickr"]}">'
-                f'<img src="{img_url}" alt="" class="gallery-image">'
+                f'<img src="{image_data.url}" alt="{image_data.title}" class="gallery-image">'
                 "</a>"
                 "</div>"
             )
