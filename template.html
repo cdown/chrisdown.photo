@@ -178,11 +178,21 @@
 
         const imagePromises = images.map(image => {
             return new Promise((resolve) => {
-                if (image.complete) {
+                const onImageEvent = () => {
                     resolve();
-                } else {
-                    image.addEventListener('load', resolve, { once: true });
-                    image.addEventListener('error', resolve, { once: true });
+                    image.removeEventListener('load', onImageEvent);
+                    image.removeEventListener('error', onImageEvent);
+                };
+
+                // We need to do this convoluted add/remove dance instead of
+                // just adding if it isn't already complete because otherwise
+                // there is a race: the image could finish loading between
+                // image.complete and adding event listeners.
+                image.addEventListener('load', onImageEvent, { once: true });
+                image.addEventListener('error', onImageEvent, { once: true });
+
+                if (image.complete) {
+                    onImageEvent();
                 }
             });
         });
