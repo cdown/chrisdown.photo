@@ -18,10 +18,11 @@ def load_template(file_path):
 
 
 def load_cache(file_path):
-    if os.path.exists(file_path):
+    try:
         with open(file_path, "r") as cache_file:
             return json.load(cache_file)
-    return {}
+    except FileNotFoundError:
+        return {}
 
 
 def save_cache(cache, file_path):
