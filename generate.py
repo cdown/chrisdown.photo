@@ -65,8 +65,8 @@ def find_large_enough_flickr_image_url(flickr_url, flickr_cache):
         img_url = get_flickr_image_url(flickr_url, size)
         if img_url:
             response = requests.head(img_url)
-            if 'imagewidth' in response.headers:
-                width = int(response.headers['imagewidth'])
+            if "imagewidth" in response.headers:
+                width = int(response.headers["imagewidth"])
                 if width >= min_width:
                     flickr_cache[flickr_url] = img_url
                     return img_url
