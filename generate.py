@@ -86,7 +86,7 @@ def generate_gallery_items_html(content, flickr_cache):
             )
             gallery_items_html += (
                 '<div class="gallery-item">'
-                f'<a href="{item["flickr"]}">'
+                f'<a href="{item["flickr"]}/lightbox/">'
                 f'<img src="{image_data.url}" alt="{image_data.title}" class="gallery-image">'
                 "</a>"
                 "</div>"
