@@ -77,6 +77,10 @@ def process_image(temp_path, output_path, danger_of_banding):
     resize_cmd = [
         "magick",
         temp_path,
+        "-auto-orient",
+        "-strip",
+        "-colorspace",
+        "sRGB",
         "-quality",
         quality,
         "-resize",
