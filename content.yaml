@@ -5,6 +5,7 @@ items:
       - I am grateful to have had my work featured in a variety of books and magazines, including those published by Springer, O'Reilly, and Menasha Ridge Press.
       - 'To explore more of my work, please visit my <a href="https://www.flickr.com/photos/chrisdown/albums/72157711447135721?layout=justified">portfolio on Flickr</a>.'
   - flickr: https://www.flickr.com/photos/chrisdown/53792287085
+    danger_of_banding: true
   - flickr: https://www.flickr.com/photos/chrisdown/53779198228
   - flickr: https://www.flickr.com/photos/chrisdown/49016081858
   - flickr: https://www.flickr.com/photos/chrisdown/53679482855
