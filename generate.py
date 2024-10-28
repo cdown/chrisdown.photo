@@ -1,125 +1,149 @@
 #!/usr/bin/env python
-
+import os
+import re
+import json
 import yaml
 import requests
+import subprocess
 from selectolax.parser import HTMLParser
-import json
-import os
 from collections import namedtuple
 
 FlickrImageData = namedtuple("FlickrImageData", ["url", "title"])
+CACHE_FILE = "image_titles_cache.json"
+IMG_DIR = "images"
+
+# On desktop, the layout has a body width of 1400px with 10px border on each
+# side, resulting in 1380px usable width. For a two-column layout, each column
+# should be half of 1380px, which is 690px. Accounting for an 8px gap on each
+# side of a column due to 16px column-gap, the required image width is 690 -
+# 8 = 682px.
+#
+# For a single column layout (e.g., on mobile), the width requirement is 820px
+# minus 10px padding either side, leading to a practical minimum width
+# requirement of 800px to ensure quality display in all layouts.
+IMG_WIDTH = 800
 
 
-def load_cache(file_path):
-    try:
-        with open(file_path, "r") as cache_file:
-            return json.load(cache_file)
-    except FileNotFoundError:
-        return {}
+def load_cache():
+    if os.path.exists(CACHE_FILE):
+        with open(CACHE_FILE) as file:
+            return json.load(file)
+    return {}
 
 
-def save_cache(cache, file_path):
-    with open(file_path, "w") as cache_file:
-        json.dump(cache, cache_file, indent=4)
+def save_cache(cache):
+    with open(CACHE_FILE, "w") as file:
+        json.dump(cache, file, indent=4)
 
 
-def get_flickr_image_data(flickr_url, size):
-    print(f"Fetching image data for {flickr_url} size {size}")
-    response = requests.get(f"{flickr_url}/sizes/{size}/")
+def extract_photo_id(url):
+    match = re.search(r"/photos/[^/]+/([^/]+)/?", url)
+    if not match:
+        raise ValueError(f"Invalid Flickr URL: {url}")
+    return match.group(1)
+
+
+def fetch_image_data(flickr_url):
+    print(f"Fetching image data from {flickr_url}")
+    response = requests.get(f"{flickr_url}/sizes/o/")
     html = HTMLParser(response.text)
-    img_tag = html.css_first('div#allsizes-photo > img[src*="live.staticflickr.com"]')
-    meta_title_tag = html.css_first('meta[name="title"]')
-
-    if not img_tag:
-        raise ValueError(f"Image tag not found for {flickr_url} size {size}")
-
-    if not meta_title_tag:
-        raise ValueError(f"Meta title tag not found for {flickr_url}")
-
-    return FlickrImageData(
-        url=img_tag.attributes["src"], title=meta_title_tag.attributes["content"]
-    )
+    title = html.css_first('meta[name="title"]').attributes["content"]
+    image_url = html.css_first(
+        'div#allsizes-photo > img[src*="live.staticflickr.com"]'
+    ).attributes["src"]
+    return title, image_url
 
 
-def find_large_enough_flickr_image_data(flickr_url, flickr_cache):
-    if flickr_url in flickr_cache:
-        print(f"Using cached data for {flickr_url}")
-        return FlickrImageData(
-            url=flickr_cache[flickr_url]["url"], title=flickr_cache[flickr_url]["title"]
-        )
+def download_image(image_url, temp_path):
+    print(f"Downloading image from {image_url}")
+    response = requests.get(image_url)
+    with open(temp_path, "wb") as file:
+        file.write(response.content)
 
-    # Smallest to largest that may give >= min_width.
-    sizes = ["c", "l", "h", "k", "o"]
 
-    # On desjtop, the layout has a body width of 1400px with 10px border on
-    # each side, resulting in 1380px usable width. For a two-column layout,
-    # each column should be half of 1380px, which is 690px. Accounting for an
-    # 8px gap on each side of a column due to 16px column-gap, the required
-    # image width is # 690 - 8 = 682px.
+def process_image(temp_path, output_path, danger_of_banding):
+    print(f"Processing image and saving to {output_path}")
+    quality = "100" if danger_of_banding else "90"
+
+    # If there's a danger of banding we do two things to try to mitigate it,
+    # since we can't use 16-bit AVIF due to 8-bit rendering pipeline in
+    # browsers:
     #
-    # For a single column layout (e.g., on mobile), the width requirement is
-    # 820px minus 10px padding either side, leading to a practical minimum
-    # width requirement of 800px to ensure quality display in all layouts.
-    min_width = 800
+    # 1. Bump the quality
+    # 2. Add a little noise
+    noise_args = (
+        ["-attenuate", "0.04", "+noise", "Gaussian"] if danger_of_banding else []
+    )
+    resize_cmd = [
+        "magick",
+        temp_path,
+        "-quality",
+        quality,
+        "-resize",
+        str(IMG_WIDTH),
+        "-unsharp",
+        "0x0.5+0.5+0.008",
+        *noise_args,
+        output_path,
+    ]
+    subprocess.run(resize_cmd, check=True)
+    os.remove(temp_path)
 
-    for size in sizes:
-        image_data = get_flickr_image_data(flickr_url, size)
-        response = requests.head(image_data.url)
-        if "imagewidth" in response.headers:
-            width = int(response.headers["imagewidth"])
-            if width >= min_width:
-                flickr_cache[flickr_url] = {
-                    "url": image_data.url,
-                    "title": image_data.title,
-                }
-                return image_data
 
-    raise ValueError("No images are big enough on Flickr")
+def get_flickr_image(flickr_url, danger_of_banding=False):
+    photo_id = extract_photo_id(flickr_url)
+    title_cache = load_cache()
+    image_path = f"{IMG_DIR}/{photo_id}.avif"
+
+    if photo_id in title_cache and os.path.exists(image_path):
+        print(f"Using cached title and image for {flickr_url}")
+        title = title_cache[photo_id]
+    else:
+        title, image_url = fetch_image_data(flickr_url)
+        title_cache[photo_id] = title
+        save_cache(title_cache)
+
+        os.makedirs(IMG_DIR, exist_ok=True)
+        if not os.path.exists(image_path):
+            temp_path = f"{IMG_DIR}/{photo_id}_temp.jpg"
+            download_image(image_url, temp_path)
+            process_image(temp_path, image_path, danger_of_banding)
+
+    print(f"Completed processing for {flickr_url}")
+    return FlickrImageData(url=image_path, title=title_cache[photo_id])
 
 
-def generate_gallery_items_html(content, flickr_cache):
-    gallery_items_html = ""
+def generate_gallery_html(content):
+    html = ""
     for item in content["items"]:
         if "flickr" in item:
-            image_data = find_large_enough_flickr_image_data(
-                item["flickr"], flickr_cache
+            print(f"Processing gallery item: {item['flickr']}")
+            image_data = get_flickr_image(
+                item["flickr"], item.get("danger_of_banding", False)
             )
-            gallery_items_html += (
-                '<div class="gallery-item">'
+            html += (
+                f'<div class="gallery-item">'
                 f'<a href="{item["flickr"]}/lightbox/">'
                 f'<img src="{image_data.url}" alt="{image_data.title}" class="gallery-image">'
-                "</a>"
-                "</div>"
+                "</a></div>"
             )
         if "text" in item:
             text_html = "</p><p class='gallery-text'>".join(item["text"])
-            gallery_items_html += (
-                '<div class="gallery-item">'
-                f"<p class='gallery-text'>{text_html}</p>"
-                "</div>"
-            )
-    return gallery_items_html
+            html += f'<div class="gallery-item"><p class="gallery-text">{text_html}</p></div>'
+    return html
 
 
-def render_html(template_file, gallery_items_html, output_path):
-    with open(output_path, "w") as output_file:
-        for line in template_file:
-            output_file.write(line.replace("{{ gallery_items }}", gallery_items_html))
+def render_html(template_path, content_html, output_path):
+    with open(template_path) as template, open(output_path, "w") as output:
+        output.write(template.read().replace("{{ gallery_items }}", content_html))
 
 
 def main():
-    with open("content.yaml", "r") as content_file:
+    with open("content.yaml") as content_file:
         content = yaml.safe_load(content_file)
-
-    with open("template.html", "r") as template_file:
-        flickr_cache = load_cache("flickr_cache.json")
-
-        gallery_items_html = generate_gallery_items_html(content, flickr_cache)
-        render_html(template_file, gallery_items_html, "output.html")
-
-        save_cache(flickr_cache, "flickr_cache.json")
-        print("Webpage generation complete. Output saved to output.html.")
-        print("Cache saved to flickr_cache.json.")
+    gallery_html = generate_gallery_html(content)
+    render_html("template.html", gallery_html, "output.html")
+    print("Webpage generation complete. Output saved to output.html.")
 
 
 if __name__ == "__main__":
