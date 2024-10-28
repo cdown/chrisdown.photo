@@ -1,5 +1,6 @@
 items:
   - flickr: https://www.flickr.com/photos/chrisdown/53436051798
+    danger_of_banding: true
   - text:
       - I am a wildlife photographer, currently based in London, England. My professional portfolio focuses on capturing the unique personalities of birds, highlighting their often overlooked charm and character. My non-professional work also includes motorsports and landscapes.
       - I am grateful to have had my work featured in a variety of books and magazines, including those published by Springer, O'Reilly, and Menasha Ridge Press.
