@@ -18,12 +18,11 @@
             display: flex;
             flex-wrap: nowrap;
             height: 100vh;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
+            overflow: hidden;
+            position: relative;
         }
 
         .gallery-item {
-            scroll-snap-align: center;
             flex: 0 0 auto;
             max-width: 100vw;
             max-height: 100vh;
@@ -34,14 +33,6 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
-        }
-
-        ::-webkit-scrollbar {
-            display: none;
-        }
-
-        .gallery-container {
-            scrollbar-width: none;
         }
 
         /* Smooth scrolling effect */
@@ -56,14 +47,33 @@
     </style>
 </head>
 <body>
-    <div class="gallery-container">
+    <div class="gallery-container" id="gallery-container">
         {{ gallery_items }}
     </div>
     <script>
-        const container = document.querySelector('.gallery-container');
+        const container = document.getElementById('gallery-container');
+        let isDragging = false;
         let startX = 0;
         let scrollLeft = 0;
-        let isDragging = false;
+
+        function duplicateContent() {
+            const items = Array.from(container.children);
+            items.forEach(item => {
+                const clone = item.cloneNode(true);
+                container.appendChild(clone);
+            });
+        }
+
+        function wrapScroll() {
+            const scrollWidth = container.scrollWidth / 2;
+            if (container.scrollLeft >= scrollWidth) {
+                container.scrollLeft -= scrollWidth;
+            } else if (container.scrollLeft <= 0) {
+                container.scrollLeft += scrollWidth;
+            }
+        }
+
+        container.addEventListener('scroll', wrapScroll);
 
         container.addEventListener('mousedown', (e) => {
             isDragging = true;
@@ -86,6 +96,16 @@
             const walk = (x - startX) * 2; // Scroll faster
             container.scrollLeft = scrollLeft - walk;
         });
+
+        document.addEventListener('wheel', (e) => {
+            if (e.deltaY !== 0) {
+                container.scrollLeft += e.deltaY;
+            } else if (e.deltaX !== 0) {
+                container.scrollLeft += e.deltaX;
+            }
+        });
+
+        duplicateContent();
     </script>
 </body>
 </html>
