@@ -12,16 +12,7 @@ FlickrImageData = namedtuple("FlickrImageData", ["url", "title"])
 CACHE_FILE = "image_titles_cache.json"
 IMG_DIR = "images"
 
-# On desktop, the layout has a body width of 1400px with 10px border on each
-# side, resulting in 1380px usable width. For a two-column layout, each column
-# should be half of 1380px, which is 690px. Accounting for an 8px gap on each
-# side of a column due to 16px column-gap, the required image width is 690 -
-# 8 = 682px.
-#
-# For a single column layout (e.g., on mobile), the width requirement is 820px
-# minus 10px padding either side, leading to a practical minimum width
-# requirement of 800px to ensure quality display in all layouts.
-IMG_WIDTH = 800
+IMG_WIDTH = 1400
 
 
 def load_cache():

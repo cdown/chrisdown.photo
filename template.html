@@ -68,7 +68,7 @@
             display: flex;
         }
         .gallery-container {
-            column-count: 2;
+            column-count: 1;
             column-gap: 16px; /* Should match with gallery-item margin */
             padding: 10px;
         }
@@ -96,12 +96,6 @@
         @media (max-width: 1000px) {
             .gallery-text {
                 font-size: 14px;
-            }
-        }
-        /* If adjusted, also adjust the minimum image size in generation */
-        @media (max-width: 820px) {
-            .gallery-container {
-                column-count: 1;
             }
         }
         @media (max-width: 500px) {
