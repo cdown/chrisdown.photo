@@ -194,7 +194,6 @@
         let startX = 0;
         let scrollLeft = 0;
 
-        let userInteracted = false;
         let fadedOut = false;
         let currentChosenHeight = 0;
         const availableHeights = [1080, 1440, 2160];
@@ -301,7 +300,6 @@
          * Mouse and touch handling for click-and-drag scrolling.
          */
         container.addEventListener('mousedown', e => {
-            userInteracted = true;
             fadeOutScrollHint();
             isDragging = true;
             startX = e.pageX - container.offsetLeft;
@@ -325,7 +323,6 @@
          * Wheel scrolling.
          */
         document.addEventListener('wheel', e => {
-            userInteracted = true;
             fadeOutScrollHint();
             const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
             ensureWraparound(scrollAmount);
@@ -335,7 +332,6 @@
          * Keyboard navigation.
          */
         document.addEventListener('keydown', e => {
-            userInteracted = true;
             fadeOutScrollHint();
             switch (e.key) {
                 case 'ArrowLeft':
@@ -355,7 +351,6 @@
          * Container scroll event to handle wrap-around.
          */
         container.addEventListener('scroll', () => {
-            userInteracted = true;
             fadeOutScrollHint();
             wrapScroll();
         });
@@ -366,16 +361,6 @@
         scrollHint.addEventListener('click', () => {
             container.scrollBy({ left: 200, behavior: 'smooth' });
         });
-
-        /**
-         * Check for user interaction periodically to fade out hint.
-         */
-        const checkUserInteraction = setInterval(() => {
-            if (userInteracted) {
-                clearInterval(checkUserInteraction);
-                fadeOutScrollHint();
-            }
-        }, 100);
 
         /**
          * Run on DOMContentLoaded.
