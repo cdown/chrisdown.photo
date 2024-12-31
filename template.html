@@ -107,7 +107,7 @@
             height: 100%;
         }
 
-        @keyframes arrowSlide {
+        @keyframes arrowSideways {
             0% {
                 transform: translateX(-50px) translateY(-50%);
                 opacity: 0;
@@ -121,6 +121,25 @@
                 opacity: 1;
             }
             100% {
+                opacity: 0;
+            }
+        }
+
+        @keyframes arrowDownwards {
+            0% {
+                transform: translateX(0) translateY(-50px);
+                opacity: 0;
+            }
+            25% {
+                transform: translateX(0) translateY(-50px);
+                opacity: 1;
+            }
+            75% {
+                transform: translateX(0) translateY(50px);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(0) translateY(50px);
                 opacity: 0;
             }
         }
@@ -139,7 +158,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            animation: arrowSlide 1.5s infinite;
+            animation: arrowSideways 1.5s infinite;
             transition: opacity 0.3s ease; /* Smooth fade-out effect over 0.3 seconds */
         }
     </style>
@@ -341,9 +360,23 @@
             }
         }
 
+        const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+
+        function setScrollHintDirection() {
+            if (isTouchDevice) {
+                console.debug("Using touch device scroll hint");
+                scrollHint.innerHTML = '&#x2192;';
+            } else {
+                console.debug("Using desktop device scroll hint");
+                scrollHint.innerHTML = '&#x2193;';
+                scrollHint.style.animation = 'arrowDownwards 1.5s infinite';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             console.debug("DOMContentLoaded event fired");
             loadBiggerImagesIfNeeded();
+            setScrollHintDirection();
         });
         window.addEventListener('resize', function() {
             console.debug("Window resize event detected");
