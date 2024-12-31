@@ -174,27 +174,48 @@
 
         duplicateContent();
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const availableHeights = [1080, 1440, 2160];
+        let currentChosenHeight = 0;
+        const availableHeights = [1080, 1440, 2160];
+
+        function loadBiggerImagesIfNeeded() {
+            console.log("Checking which size of images are needed");
             const screenHeightMinusNavbar = window.innerHeight - 50;
-            let chosenHeight = 1080;
+            let newChosenHeight = 0;
 
             for (let i = 0; i < availableHeights.length; i++) {
-                if (screenHeightMinusNavbar > availableHeights[i]) {
-                    chosenHeight = availableHeights[i];
+                if (screenHeightMinusNavbar <= availableHeights[i]) {
+                    newChosenHeight = availableHeights[i];
                     break;
                 }
             }
 
-            const images = document.querySelectorAll('.gallery-image');
-            images.forEach(img => {
-                const path = img.getAttribute(`data-${chosenHeight}`);
-                if (path) {
-                    img.src = path;
-                } else {
-                    img.src = img.getAttribute('data-1080') || '';
-                }
-            });
+            console.log("Non-navbar height: %d, chosen image height: %d", screenHeightMinusNavbar, newChosenHeight);
+
+            if (newChosenHeight == 0) {
+                console.log("Couldn't find a large enough image, doing fallback");
+                newChosenHeight = availableHeights[availableHeights.length - 1];
+            }
+
+            if (newChosenHeight > currentChosenHeight) {
+                console.log("This is larger than current image height, loading");
+                currentChosenHeight = newChosenHeight;
+                const images = document.querySelectorAll('.gallery-image');
+                images.forEach(img => {
+                    const path = img.getAttribute(`data-${newChosenHeight}`);
+                    if (path) {
+                        img.src = path;
+                    }
+                });
+            } else {
+                console.log("This is within current image height, continuing to use %d", currentChosenHeight);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBiggerImagesIfNeeded();
+        });
+        window.addEventListener('resize', function() {
+            loadBiggerImagesIfNeeded();
         });
     </script>
 </body>
