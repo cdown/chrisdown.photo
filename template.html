@@ -32,6 +32,13 @@
             scroll-behavior: smooth;
         }
 
+        .about-container {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            -webkit-transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%);
+        }
 
         body {
             margin: 0;
@@ -159,7 +166,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            animation: arrowSideways 1.5s infinite;
+            opacity: 0;
             transition: opacity var(--transition-duration) ease;
         }
     </style>
@@ -186,9 +193,7 @@
     <div class="gallery-container" id="gallery-container">{{ gallery_items }}</div>
 
     <div class="about-container" id="about-container">
-        <div style="text-align: center; max-width: 600px; font-size: 18px; color: var(--text-color);">
             <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam.</p>
-        </div>
     </div>
 
     <div class="scroll-hint" id="scroll-hint">&#x2192;</div>
@@ -237,9 +242,13 @@
             galleryContainer.scrollLeft = targetScrollLeft;
         }
 
-        function fadeOutScrollHint() {
+        let storedAnimation = 'none';
+
+        function stopScrollHint() {
             if (fadedOut) return;
             fadedOut = true;
+
+            storedAnimation = scrollHint.style.animation;
 
             const stopAnimation = () => {
                 scrollHint.style.animation = 'none';
@@ -247,6 +256,14 @@
                 scrollHint.removeEventListener('animationiteration', stopAnimation);
             };
             scrollHint.addEventListener('animationiteration', stopAnimation);
+        }
+
+        function startScrollHint() {
+            fadedOut = false;
+            scrollHint.style.opacity = '1';
+            if (storedAnimation !== 'none') {
+                scrollHint.style.animation = storedAnimation;
+            }
         }
 
         function loadBiggerImagesIfNeeded() {
@@ -280,6 +297,7 @@
             const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
             if (isTouchDevice) {
                 scrollHint.innerHTML = '&#x2192;';
+                scrollHint.style.animation = 'arrowSideways 1.5s infinite';
             } else {
                 scrollHint.innerHTML = '&#x2193;';
                 scrollHint.style.animation = 'arrowDownwards 1.5s infinite';
@@ -287,13 +305,13 @@
         }
 
         document.addEventListener('wheel', e => {
-            fadeOutScrollHint();
+            stopScrollHint();
             const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
             ensureWraparound(scrollAmount);
         });
 
         document.addEventListener('keydown', e => {
-            fadeOutScrollHint();
+            stopScrollHint();
             switch (e.key) {
                 case 'ArrowLeft':
                 case 'ArrowUp':
@@ -309,7 +327,7 @@
         });
 
         galleryContainer.addEventListener('scroll', () => {
-            fadeOutScrollHint();
+            stopScrollHint();
             wrapScroll();
         });
 
@@ -321,14 +339,16 @@
             if (hash === '#about') {
                 galleryContainer.style.display = 'none';
                 aboutContainer.style.display = 'flex';
+                stopScrollHint();
             } else {
                 galleryContainer.style.display = 'block';
                 aboutContainer.style.display = 'none';
+                startScrollHint();
             }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            showSection(window.location.hash || '#gallery');
+            showSection(window.location.hash);
             window.addEventListener('hashchange', () => showSection(window.location.hash));
             duplicateContent();
             loadBiggerImagesIfNeeded();
