@@ -148,16 +148,30 @@ def generate_gallery_html(content):
     return html
 
 
-def render_html(template_path, content_html, output_path):
+def generate_about(content):
+    html = f"""
+    <div class="about-content">
+        <img class="about-image" src="{content["about"]["image"]}">
+        <div class="about-text">
+            {''.join(f"<p>{item}</p>" for item in content["about"]["text"])}
+        </div>
+    </div>
+    """
+    return html
+
+def render_html(template_path, content, output_path):
     with open(template_path) as template, open(output_path, "w") as output:
-        output.write(template.read().replace("{{ gallery_items }}", content_html))
+        output.write(
+            template.read()
+            .replace("{{ gallery_items }}", generate_gallery_html(content))
+            .replace("{{ about }}", generate_about(content))
+        )
 
 
 def main():
     with open("content.yaml") as content_file:
         content = yaml.safe_load(content_file)
-    gallery_html = generate_gallery_html(content)
-    render_html("template.html", gallery_html, "output.html")
+    render_html("template.html", content, "output.html")
     print("Webpage generation complete. Output saved to output.html.")
 
 

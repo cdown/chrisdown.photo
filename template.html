@@ -36,8 +36,42 @@
             position: absolute;
             left: 50%;
             top: 50%;
-            -webkit-transform: translate(-50%, -50%);
             transform: translate(-50%, -50%);
+            width: 70%;
+            max-width: 800px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: left;
+        }
+
+        .about-content {
+            display: flex;
+            align-items: center;
+        }
+
+        .about-image {
+            min-width: 40%;
+            max-width: 400px;
+            margin-right: 20px;
+            height: auto;
+        }
+
+        .about-text {
+            flex: 1;
+            min-width: 50%;
+            max-width: 400px;
+        }
+
+        .about-text p {
+            margin: 0 0 10px;
+            line-height: 1.5;
+            color: var(--text-color);
+        }
+
+        .about-text a {
+            color: inherit;
+            text-decoration: underline;
         }
 
         body {
@@ -191,10 +225,7 @@
     </nav>
 
     <div class="gallery-container" id="gallery-container">{{ gallery_items }}</div>
-
-    <div class="about-container" id="about-container">
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam.</p>
-    </div>
+    <div class="about-container" id="about-container">{{ about }}</div>
 
     <div class="scroll-hint" id="scroll-hint">&#x2192;</div>
 
@@ -338,7 +369,7 @@
         function showSection(hash) {
             if (hash === '#about') {
                 galleryContainer.style.display = 'none';
-                aboutContainer.style.display = 'flex';
+                aboutContainer.style.display = 'block';
                 stopScrollHint();
             } else {
                 galleryContainer.style.display = 'block';
