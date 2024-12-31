@@ -157,7 +157,7 @@
         let userInteracted = false;
 
         function duplicateContent() {
-            console.log("Duplicating content for wraparound");
+            console.debug("Duplicating content for wraparound");
             const items = Array.from(container.children);
             items.forEach(item => {
                 const clone = item.cloneNode(true);
@@ -168,10 +168,10 @@
         function wrapScroll() {
             const totalWidth = container.scrollWidth / 2;
             if (container.scrollLeft >= totalWidth) {
-                console.log("Scrolled past the midpoint, wrapping around");
+                console.debug("Scrolled past the midpoint, wrapping around");
                 container.scrollLeft -= totalWidth;
             } else if (container.scrollLeft <= 0) {
-                console.log("Scrolled before the start, wrapping around");
+                console.debug("Scrolled before the start, wrapping around");
                 container.scrollLeft += totalWidth;
             }
         }
@@ -183,7 +183,7 @@
         });
 
         container.addEventListener('mousedown', (e) => {
-            console.log("Mouse down on gallery");
+            console.debug("Mouse down on gallery");
             userInteracted = true;
             fadeOutScrollHint();
             isDragging = true;
@@ -192,12 +192,12 @@
         });
 
         container.addEventListener('mouseleave', () => {
-            console.log("Mouse left the gallery");
+            console.debug("Mouse left the gallery");
             isDragging = false;
         });
 
         container.addEventListener('mouseup', () => {
-            console.log("Mouse up on gallery");
+            console.debug("Mouse up on gallery");
             isDragging = false;
         });
 
@@ -217,24 +217,24 @@
         });
 
         document.addEventListener('keydown', (e) => {
-            console.log("Key pressed: ", e.key);
+            console.debug("Key pressed: ", e.key);
             userInteracted = true;
             fadeOutScrollHint();
             switch(e.key) {
                 case 'ArrowLeft':
                 case 'ArrowUp':
                 case 'PageUp':
-                    console.log("Scrolling left");
+                    console.debug("Scrolling left");
                     ensureWraparound(-200);
                     break;
                 case 'ArrowRight':
                 case 'ArrowDown':
                 case 'PageDown':
-                    console.log("Scrolling right");
+                    console.debug("Scrolling right");
                     ensureWraparound(200);
                     break;
                 default:
-                    console.log("Unhandled key press");
+                    console.debug("Unhandled key press");
                     return;
             }
         });
@@ -245,11 +245,11 @@
             let targetScrollLeft = container.scrollLeft + scrollAmount;
 
             if (targetScrollLeft < 0) {
-                console.log("Scroll underflow, adjusting");
+                console.debug("Scroll underflow, adjusting");
                 const underflow = Math.abs(targetScrollLeft);
                 targetScrollLeft = totalWidth - underflow;
             } else if (targetScrollLeft >= totalWidth) {
-                console.log("Scroll overflow, adjusting");
+                console.debug("Scroll overflow, adjusting");
                 const overflow = targetScrollLeft - totalWidth;
                 targetScrollLeft = overflow;
             }
@@ -260,7 +260,7 @@
         duplicateContent();
 
         scrollHint.addEventListener('click', () => {
-            console.log("Scroll hint clicked");
+            console.debug("Scroll hint clicked");
             container.scrollBy({ left: 200, behavior: 'smooth' });
         });
 
@@ -271,17 +271,17 @@
                 return;
             }
             fadedOut = true;
-            console.log("Fading scroll hint");
+            console.debug("Fading scroll hint");
             scrollHint.style.opacity = '0';
             setTimeout(() => {
-                console.log("Hiding scroll hint");
+                console.debug("Hiding scroll hint");
                 scrollHint.style.display = 'none';
             }, 200);
         }
 
         let checkUserInteraction = setInterval(() => {
             if (userInteracted) {
-                console.log("User interaction detected, clearing interval");
+                console.debug("User interaction detected, clearing interval");
                 clearInterval(checkUserInteraction);
                 fadeOutScrollHint();
             }
@@ -291,7 +291,7 @@
         const availableHeights = [1080, 1440, 2160];
 
         function loadBiggerImagesIfNeeded() {
-            console.log("Checking which size of images are needed");
+            console.debug("Checking which size of images are needed");
             const screenHeightMinusNavbar = window.innerHeight - 50;
             let newChosenHeight = 0;
 
@@ -302,35 +302,35 @@
                 }
             }
 
-            console.log("Non-navbar height: %d, chosen image height: %d", screenHeightMinusNavbar, newChosenHeight);
+            console.debug("Non-navbar height: %d, chosen image height: %d", screenHeightMinusNavbar, newChosenHeight);
 
             if (newChosenHeight == 0) {
-                console.log("Couldn't find a large enough image, doing fallback");
+                console.debug("Couldn't find a large enough image, doing fallback");
                 newChosenHeight = availableHeights[availableHeights.length - 1];
             }
 
             if (newChosenHeight > currentChosenHeight) {
-                console.log("This is larger than current image height, loading");
+                console.debug("This is larger than current image height, loading");
                 currentChosenHeight = newChosenHeight;
                 const images = document.querySelectorAll('.gallery-image');
                 images.forEach(img => {
                     const path = img.getAttribute(`data-${newChosenHeight}`);
                     if (path) {
-                        console.log("Loading image: ", path);
+                        console.debug("Loading image: ", path);
                         img.src = path;
                     }
                 });
             } else {
-                console.log("This is within current image height, continuing to use %d", currentChosenHeight);
+                console.debug("This is within current image height, continuing to use %d", currentChosenHeight);
             }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("DOMContentLoaded event fired");
+            console.debug("DOMContentLoaded event fired");
             loadBiggerImagesIfNeeded();
         });
         window.addEventListener('resize', function() {
-            console.log("Window resize event detected");
+            console.debug("Window resize event detected");
             loadBiggerImagesIfNeeded();
         });
     </script>
