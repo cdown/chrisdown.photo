@@ -162,32 +162,45 @@
             transition: opacity var(--transition-duration) ease;
         }
 
-        .about-overlay {
-            position: fixed;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 70%;
-            max-width: 800px;
+        .about-content {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: left;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            visibility: hidden;
-            opacity: 0;
-            background-color: #fff;
         }
 
-        .about-image {
-            min-width: 40%;
-            max-width: 400px;
-            margin-right: 20px;
-            height: auto;
+        #about-link {
+            cursor: pointer;
         }
+
+.about-overlay {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 70%;
+    max-width: 800px;
+    display: flex; /* This ensures the image and text are laid out side by side */
+    flex-direction: row; /* Horizontal layout */
+    align-items: center; /* Vertically align the items */
+    text-align: left;
+    z-index: 1000;
+    visibility: hidden;
+    opacity: 0;
+    background-color: #fff;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.about-image {
+    width: 50%; /* Minimum width of 50% */
+    max-width: 400px; /* Maximum width of 400px */
+    height: auto; /* Maintain aspect ratio */
+    margin-right: 20px; /* Space between the image and text */
+}
+
+.about-text {
+    flex: 1; /* Take up the remaining space */
+}
+
 
         .about-overlay.active {
             visibility: visible;
@@ -205,11 +218,6 @@
             color: var(--text-color);
         }
 
-        .about-text {
-            flex: 1;
-            min-width: 50%;
-            max-width: 400px;
-        }
 
         .about-text p {
             margin: 0 0 10px;
