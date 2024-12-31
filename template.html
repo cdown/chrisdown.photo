@@ -107,29 +107,40 @@
             height: 100%;
         }
 
+        @keyframes arrowSlide {
+            0% {
+                transform: translateX(-50px) translateY(-50%);
+                opacity: 0;
+            }
+            25% {
+                transform: translateX(-50px) translateY(-50%);
+                opacity: 1;
+            }
+            75% {
+                transform: translateX(0) translateY(-50%);
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+
         .scroll-hint {
             position: fixed;
             top: 50%;
             right: 10px;
             transform: translateY(-50%);
             z-index: 1000;
-            background: rgba(0, 0, 0, 0.6);
-            color: white;
-            padding: 10px;
-            border-radius: 50%;
-            font-size: 16px;
+            background: none;
+            color: #fff;
+            text-shadow: -2px 0 #000, 0 2px #000, 2px 0 #000, 0 -2px #000;
+            font-size: 48px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            animation: flash 0.5s infinite;
-            opacity: 1;
-            transition: opacity 0.2s;
-        }
-
-        @keyframes flash {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+            animation: arrowSlide 1.5s infinite;
+            transition: opacity 0.3s ease; /* Smooth fade-out effect over 0.3 seconds */
         }
     </style>
 </head>
@@ -271,12 +282,17 @@
                 return;
             }
             fadedOut = true;
-            console.debug("Fading scroll hint");
-            scrollHint.style.opacity = '0';
-            setTimeout(() => {
-                console.debug("Hiding scroll hint");
-                scrollHint.style.display = 'none';
-            }, 200);
+
+            console.debug("Fading scroll hint after current animation round");
+
+            const stopAnimation = () => {
+                console.debug("Animation round complete, stopping animation");
+                scrollHint.style.animation = 'none';
+                scrollHint.style.opacity = '0';
+                scrollHint.removeEventListener('animationiteration', stopAnimation);
+            };
+
+            scrollHint.addEventListener('animationiteration', stopAnimation);
         }
 
         let checkUserInteraction = setInterval(() => {
