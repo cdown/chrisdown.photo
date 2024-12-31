@@ -168,14 +168,14 @@
     <nav class="navbar">
         <ul class="navbar-menu">
             <li class="navbar-menu-item">
-                <a href="/">Gallery</a>
+                <a href="#gallery">Gallery</a>
             </li>
         </ul>
-        <a href="/" class="navbar-title navbar-title-full">Chris Down Photography</a>
-        <a href="/" class="navbar-title navbar-title-short">Chris Down</a>
+        <a href="#gallery" class="navbar-title navbar-title-full">Chris Down Photography</a>
+        <a href="#gallery" class="navbar-title navbar-title-short">Chris Down</a>
         <ul class="navbar-menu">
             <li class="navbar-menu-item">
-                <a href="/about">about</a>
+                <a href="#about">about</a>
             </li>
             <li class="navbar-menu-item">
                 <a href="https://chrisdown.name/">tech</a>
@@ -185,10 +185,17 @@
 
     <div class="gallery-container" id="gallery-container">{{ gallery_items }}</div>
 
+    <div class="about-container" id="about-container">
+        <div style="text-align: center; max-width: 600px; font-size: 18px; color: var(--text-color);">
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam.</p>
+        </div>
+    </div>
+
     <div class="scroll-hint" id="scroll-hint">&#x2192;</div>
 
     <script>
-        const container = document.getElementById('gallery-container');
+        const galleryContainer = document.getElementById('gallery-container');
+        const aboutContainer = document.getElementById('about-container');
         const scrollHint = document.getElementById('scroll-hint');
         let isDragging = false;
         let startX = 0;
@@ -203,19 +210,19 @@
          * Duplicate gallery items to achieve wrap-around scrolling.
          */
         function duplicateContent() {
-            const items = Array.from(container.children);
-            items.forEach(item => container.appendChild(item.cloneNode(true)));
+            const items = Array.from(galleryContainer.children);
+            items.forEach(item => galleryContainer.appendChild(item.cloneNode(true)));
         }
 
         /**
          * Wrap-around logic for continuous horizontal scrolling.
          */
         function wrapScroll() {
-            const totalWidth = container.scrollWidth / 2;
-            if (container.scrollLeft >= totalWidth) {
-                container.scrollLeft -= totalWidth;
-            } else if (container.scrollLeft <= 0) {
-                container.scrollLeft += totalWidth;
+            const totalWidth = galleryContainer.scrollWidth / 2;
+            if (galleryContainer.scrollLeft >= totalWidth) {
+                galleryContainer.scrollLeft -= totalWidth;
+            } else if (galleryContainer.scrollLeft <= 0) {
+                galleryContainer.scrollLeft += totalWidth;
             }
         }
 
@@ -224,8 +231,8 @@
          * calculates the new target scroll position while wrapping.
          */
         function ensureWraparound(scrollAmount) {
-            const totalWidth = container.scrollWidth / 2;
-            let targetScrollLeft = container.scrollLeft + scrollAmount;
+            const totalWidth = galleryContainer.scrollWidth / 2;
+            let targetScrollLeft = galleryContainer.scrollLeft + scrollAmount;
 
             if (targetScrollLeft < 0) {
                 const underflow = Math.abs(targetScrollLeft);
@@ -235,7 +242,7 @@
                 targetScrollLeft = overflow;
             }
 
-            container.scrollLeft = targetScrollLeft;
+            galleryContainer.scrollLeft = targetScrollLeft;
         }
 
         /**
@@ -300,25 +307,25 @@
         /**
          * Mouse and touch handling for click-and-drag scrolling.
          */
-        container.addEventListener('mousedown', e => {
+        galleryContainer.addEventListener('mousedown', e => {
             userInteracted = true;
             fadeOutScrollHint();
             isDragging = true;
-            startX = e.pageX - container.offsetLeft;
-            scrollLeft = container.scrollLeft;
+            startX = e.pageX - galleryContainer.offsetLeft;
+            scrollLeft = galleryContainer.scrollLeft;
         });
-        container.addEventListener('mouseleave', () => {
+        galleryContainer.addEventListener('mouseleave', () => {
             isDragging = false;
         });
-        container.addEventListener('mouseup', () => {
+        galleryContainer.addEventListener('mouseup', () => {
             isDragging = false;
         });
-        container.addEventListener('mousemove', e => {
+        galleryContainer.addEventListener('mousemove', e => {
             if (!isDragging) return;
             e.preventDefault();
-            const x = e.pageX - container.offsetLeft;
+            const x = e.pageX - galleryContainer.offsetLeft;
             const walk = (x - startX) * 2;
-            container.scrollLeft = scrollLeft - walk;
+            galleryContainer.scrollLeft = scrollLeft - walk;
         });
 
         /**
@@ -352,9 +359,9 @@
         });
 
         /**
-         * Container scroll event to handle wrap-around.
+         * galleryContainer scroll event to handle wrap-around.
          */
-        container.addEventListener('scroll', () => {
+        galleryContainer.addEventListener('scroll', () => {
             userInteracted = true;
             fadeOutScrollHint();
             wrapScroll();
@@ -364,7 +371,7 @@
          * Scroll hint click to nudge the gallery.
          */
         scrollHint.addEventListener('click', () => {
-            container.scrollBy({ left: 200, behavior: 'smooth' });
+            galleryContainer.scrollBy({ left: 200, behavior: 'smooth' });
         });
 
         /**
@@ -380,7 +387,19 @@
         /**
          * Run on DOMContentLoaded.
          */
+        function showSection(hash) {
+            if (hash === '#about') {
+                galleryContainer.style.display = 'none';
+                aboutContainer.style.display = 'flex';
+            } else {
+                galleryContainer.style.display = 'block';
+                aboutContainer.style.display = 'none';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            showSection(window.location.hash || '#gallery');
+            window.addEventListener('hashchange', () => showSection(window.location.hash));
             duplicateContent();
             loadBiggerImagesIfNeeded();
             setScrollHintDirection();
