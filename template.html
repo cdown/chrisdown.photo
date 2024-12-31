@@ -41,7 +41,7 @@
             justify-content: space-between;
             align-items: center;
             top: 0;
-            padding: 10px;
+            height: 40px;
             margin: 0;
         }
 
@@ -53,16 +53,20 @@
         }
 
         .navbar-menu-item a {
-            text-decoration: none;
             padding: 6px 20px;
             text-transform: lowercase;
-            font-size: 11px;
+            font-size: 20px;
             color: #333;
+            text-decoration: none;
+        }
+
+        .navbar-menu-item a:hover {
+            color: #aaa;
         }
 
         .navbar-title {
             text-transform: lowercase;
-            font-size: 22px;
+            font-size: 20px;
             color: #333;
             text-decoration: none;
         }
@@ -86,7 +90,7 @@
 
         .gallery-container {
             position: absolute;
-            top: 50px; /* 40px navbar + 10px padding */
+            top: 60px; /* navbar */
             left: 0;
             right: 0;
             bottom: 0;
@@ -113,7 +117,7 @@
         <a href="/" class="navbar-title navbar-title-full">Chris Down Photography</a>
         <a href="/" class="navbar-title navbar-title-short">Chris Down</a>
         <ul class="navbar-menu">
-            <li class="navbar-menu-item"><a href="https://www.flickr.com/photos/chrisdown/albums/72157711447135721?layout=justified">flickr</a></li>
+            <li class="navbar-menu-item"><a href="/about">about</a></li>
             <li class="navbar-menu-item"><a href="https://chrisdown.name/">tech</a></li>
         </ul>
     </nav>
