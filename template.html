@@ -304,29 +304,6 @@
         }
 
         /**
-         * Mouse and touch handling for click-and-drag scrolling.
-         */
-        galleryContainer.addEventListener('mousedown', e => {
-            fadeOutScrollHint();
-            isDragging = true;
-            startX = e.pageX - galleryContainer.offsetLeft;
-            scrollLeft = galleryContainer.scrollLeft;
-        });
-        galleryContainer.addEventListener('mouseleave', () => {
-            isDragging = false;
-        });
-        galleryContainer.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-        galleryContainer.addEventListener('mousemove', e => {
-            if (!isDragging) return;
-            e.preventDefault();
-            const x = e.pageX - galleryContainer.offsetLeft;
-            const walk = (x - startX) * 2;
-            galleryContainer.scrollLeft = scrollLeft - walk;
-        });
-
-        /**
          * Wheel scrolling.
          */
         document.addEventListener('wheel', e => {
