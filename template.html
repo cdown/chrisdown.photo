@@ -32,48 +32,6 @@
             scroll-behavior: smooth;
         }
 
-        .about-container {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 70%;
-            max-width: 800px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: left;
-        }
-
-        .about-content {
-            display: flex;
-            align-items: center;
-        }
-
-        .about-image {
-            min-width: 40%;
-            max-width: 400px;
-            margin-right: 20px;
-            height: auto;
-        }
-
-        .about-text {
-            flex: 1;
-            min-width: 50%;
-            max-width: 400px;
-        }
-
-        .about-text p {
-            margin: 0 0 10px;
-            line-height: 1.5;
-            color: var(--text-color);
-        }
-
-        .about-text a {
-            color: inherit;
-            text-decoration: underline;
-        }
-
         body {
             margin: 0;
             font-family: var(--font-primary);
@@ -203,6 +161,66 @@
             opacity: 0;
             transition: opacity var(--transition-duration) ease;
         }
+
+        .about-overlay {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            max-width: 800px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: left;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            background-color: #fff;
+        }
+
+        .about-image {
+            min-width: 40%;
+            max-width: 400px;
+            margin-right: 20px;
+            height: auto;
+        }
+
+        .about-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .about-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .about-text {
+            flex: 1;
+            min-width: 50%;
+            max-width: 400px;
+        }
+
+        .about-text p {
+            margin: 0 0 10px;
+            line-height: 1.5;
+            color: var(--text-color);
+        }
+
+        .about-text a {
+            color: inherit;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -212,26 +230,24 @@
                 <a href="#gallery">Gallery</a>
             </li>
         </ul>
-        <a href="#gallery" class="navbar-title navbar-title-full">Chris Down Photography</a>
-        <a href="#gallery" class="navbar-title navbar-title-short">Chris Down</a>
+        <a href="#gallery" class="navbar-title">Chris Down Photography</a>
         <ul class="navbar-menu">
             <li class="navbar-menu-item">
-                <a href="#about">about</a>
-            </li>
-            <li class="navbar-menu-item">
-                <a href="https://chrisdown.name/">tech</a>
+                <a id="about-link">About</a>
             </li>
         </ul>
     </nav>
 
     <div class="gallery-container" id="gallery-container">{{ gallery_items }}</div>
-    <div class="about-container" id="about-container">{{ about }}</div>
+
+    <div class="about-overlay" id="about-overlay">
+        <button class="about-close" id="about-close">&times;</button>
+        {{ about }}
+    </div>
 
     <div class="scroll-hint" id="scroll-hint">&#x2192;</div>
-
     <script>
         const galleryContainer = document.getElementById('gallery-container');
-        const aboutContainer = document.getElementById('about-container');
         const scrollHint = document.getElementById('scroll-hint');
         let isDragging = false;
         let startX = 0;
@@ -366,21 +382,7 @@
             galleryContainer.scrollBy({ left: 200, behavior: 'smooth' });
         });
 
-        function showSection(hash) {
-            if (hash === '#about') {
-                galleryContainer.style.display = 'none';
-                aboutContainer.style.display = 'block';
-                stopScrollHint();
-            } else {
-                galleryContainer.style.display = 'block';
-                aboutContainer.style.display = 'none';
-                startScrollHint();
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
-            showSection(window.location.hash);
-            window.addEventListener('hashchange', () => showSection(window.location.hash));
             duplicateContent();
             loadBiggerImagesIfNeeded();
             setScrollHintDirection();
@@ -388,6 +390,24 @@
 
         window.addEventListener('resize', () => {
             loadBiggerImagesIfNeeded();
+        });
+
+        const aboutLink = document.getElementById('about-link');
+        const aboutOverlay = document.getElementById('about-overlay');
+        const aboutClose = document.getElementById('about-close');
+
+        aboutLink.addEventListener('click', () => {
+            aboutOverlay.classList.add('active');
+        });
+
+        aboutClose.addEventListener('click', () => {
+            aboutOverlay.classList.remove('active');
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === aboutOverlay) {
+                aboutOverlay.classList.remove('active');
+            }
         });
     </script>
 </body>
