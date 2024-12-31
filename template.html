@@ -297,29 +297,6 @@
         }
 
         /**
-         * Mouse and touch handling for click-and-drag scrolling.
-         */
-        container.addEventListener('mousedown', e => {
-            fadeOutScrollHint();
-            isDragging = true;
-            startX = e.pageX - container.offsetLeft;
-            scrollLeft = container.scrollLeft;
-        });
-        container.addEventListener('mouseleave', () => {
-            isDragging = false;
-        });
-        container.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-        container.addEventListener('mousemove', e => {
-            if (!isDragging) return;
-            e.preventDefault();
-            const x = e.pageX - container.offsetLeft;
-            const walk = (x - startX) * 2;
-            container.scrollLeft = scrollLeft - walk;
-        });
-
-        /**
          * Wheel scrolling.
          */
         document.addEventListener('wheel', e => {
