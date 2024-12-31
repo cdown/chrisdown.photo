@@ -24,12 +24,14 @@
             font-weight: normal;
             font-style: normal;
         }
+
         body {
             margin: 0;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
+            font-family: 'Geomanist', sans-serif;
+        }
+
+        html {
+            scroll-behavior: smooth;
         }
 
         .navbar {
@@ -37,10 +39,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: sticky;
             top: 0;
-            background-color: rgba(255, 255, 255, 0.9);
-            z-index: 1000;
             padding: 10px;
             margin: 0;
         }
@@ -91,32 +90,18 @@
             right: 0;
             bottom: 0;
             white-space: nowrap;
-            overflow-x: scroll;
-            overflow-y: hidden;
+            overflow: hidden;
         }
 
         .gallery-item {
             display: inline-block;
             height: 100%;
-            vertical-align: top;
-            position: relative;
         }
 
         .gallery-image {
             height: 100%;
-            width: auto;
-            display: block;
         }
 
-        /* Smooth scrolling effect */
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'Geomanist', sans-serif;
-            overscroll-behavior: contain;
-        }
     </style>
 </head>
 <body>
@@ -188,6 +173,29 @@
         });
 
         duplicateContent();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const availableHeights = [1080, 1440, 2160];
+            const screenHeightMinusNavbar = window.innerHeight - 50;
+            let chosenHeight = 1080;
+
+            for (let i = 0; i < availableHeights.length; i++) {
+                if (screenHeightMinusNavbar > availableHeights[i]) {
+                    chosenHeight = availableHeights[i];
+                    break;
+                }
+            }
+
+            const images = document.querySelectorAll('.gallery-image');
+            images.forEach(img => {
+                const path = img.getAttribute(`data-${chosenHeight}`);
+                if (path) {
+                    img.src = path;
+                } else {
+                    img.src = img.getAttribute('data-1080') || '';
+                }
+            });
+        });
     </script>
 </body>
 </html>

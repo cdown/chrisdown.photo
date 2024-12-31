@@ -8,11 +8,11 @@ import subprocess
 from selectolax.parser import HTMLParser
 from collections import namedtuple
 
-FlickrImageData = namedtuple("FlickrImageData", ["url", "title"])
+FlickrImageData = namedtuple("FlickrImageData", ["title", "sizes"])
 CACHE_FILE = "image_titles_cache.json"
 IMG_DIR = "images"
 
-IMG_MAX_DIMENSION = 1400
+IMG_HEIGHTS = [1080, 1440, 2160]
 
 
 def load_cache():
@@ -52,8 +52,7 @@ def download_image(image_url, temp_path):
         file.write(response.content)
 
 
-def process_image(temp_path, output_path, danger_of_banding):
-    print(f"Processing image and saving to {output_path}")
+def process_image_for_height(temp_path, output_path, height, danger_of_banding):
     quality = "100" if danger_of_banding else "90"
 
     # If there's a danger of banding we do two things to try to mitigate it,
@@ -75,37 +74,55 @@ def process_image(temp_path, output_path, danger_of_banding):
         "-quality",
         quality,
         "-resize",
-        str(IMG_MAX_DIMENSION),
+        f"x{height}",
         "-unsharp",
         "0x0.5+0.5+0.008",
         *noise_args,
         output_path,
     ]
     subprocess.run(resize_cmd, check=True)
-    os.remove(temp_path)
 
 
 def get_flickr_image(flickr_url, danger_of_banding=False):
     photo_id = extract_photo_id(flickr_url)
     title_cache = load_cache()
-    image_path = f"{IMG_DIR}/{photo_id}.avif"
+    image_title = title_cache.get(photo_id, None)
+    sizes = {}
 
-    if photo_id in title_cache and os.path.exists(image_path):
-        print(f"Using cached title and image for {flickr_url}")
-        title = title_cache[photo_id]
-    else:
-        title, image_url = fetch_image_data(flickr_url)
-        title_cache[photo_id] = title
-        save_cache(title_cache)
+    # We store references to e.g. images/<photo_id>_1080.avif, etc.
+    # If not all sizes exist, fetch image and create them
+    # Otherwise, if they're on disk, just skip re-download
+    missing_sizes = []
+    for h in IMG_HEIGHTS:
+        path_for_height = f"{IMG_DIR}/{photo_id}_{h}.avif"
+        sizes[str(h)] = path_for_height
+        if not os.path.exists(path_for_height):
+            missing_sizes.append(h)
 
+    if missing_sizes or image_title is None:
+        # Need to either fetch or generate images
+        if image_title is None:
+            fetched_title, image_url = fetch_image_data(flickr_url)
+            title_cache[photo_id] = fetched_title
+            save_cache(title_cache)
+        else:
+            # We already have the title, but we still need the URL for re-downloading
+            _, image_url = fetch_image_data(flickr_url)
+
+        image_title = title_cache[photo_id]
         os.makedirs(IMG_DIR, exist_ok=True)
-        if not os.path.exists(image_path):
-            temp_path = f"{IMG_DIR}/{photo_id}_temp.jpg"
-            download_image(image_url, temp_path)
-            process_image(temp_path, image_path, danger_of_banding)
+
+        temp_path = f"{IMG_DIR}/{photo_id}_temp.jpg"
+        download_image(image_url, temp_path)
+
+        for h in missing_sizes:
+            avif_path = f"{IMG_DIR}/{photo_id}_{h}.avif"
+            process_image_for_height(temp_path, avif_path, h, danger_of_banding)
+
+        os.remove(temp_path)
 
     print(f"Completed processing for {flickr_url}")
-    return FlickrImageData(url=image_path, title=title_cache[photo_id])
+    return FlickrImageData(title=image_title, sizes=sizes)
 
 
 def generate_gallery_html(content):
@@ -116,10 +133,14 @@ def generate_gallery_html(content):
             image_data = get_flickr_image(
                 item["flickr"], item.get("danger_of_banding", False)
             )
+            data_attrs = []
+            for h in IMG_HEIGHTS:
+                data_attrs.append(f'data-{h}="{image_data.sizes[str(h)]}"')
+            data_attrs_str = " ".join(data_attrs)
             html += (
                 f'<div class="gallery-item">'
                 f'<a href="{item["flickr"]}">'
-                f'<img src="{image_data.url}" alt="{image_data.title}" class="gallery-image">'
+                f'<img src="" {data_attrs_str} alt="{image_data.title}" class="gallery-image">'
                 "</a></div>"
             )
         if "text" in item:
