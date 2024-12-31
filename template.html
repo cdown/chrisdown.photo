@@ -25,13 +25,14 @@
             font-style: normal;
         }
 
+        :root {
+            scroll-behavior: smooth;
+        }
+
+
         body {
             margin: 0;
             font-family: 'Geomanist', sans-serif;
-        }
-
-        html {
-            scroll-behavior: smooth;
         }
 
         .navbar {
@@ -165,10 +166,40 @@
         });
 
         document.addEventListener('wheel', (e) => {
-            if (e.deltaY !== 0) {
-                container.scrollLeft += e.deltaY;
-            } else if (e.deltaX !== 0) {
-                container.scrollLeft += e.deltaX;
+            let scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
+            ensureWraparound(scrollAmount);
+        });
+
+        function ensureWraparound(scrollAmount) {
+            const totalWidth = container.scrollWidth / 2;
+
+            let targetScrollLeft = container.scrollLeft + scrollAmount;
+
+            if (targetScrollLeft < 0) {
+                const underflow = Math.abs(targetScrollLeft);
+                targetScrollLeft = totalWidth - underflow;
+            } else if (targetScrollLeft >= totalWidth) {
+                const overflow = targetScrollLeft - totalWidth;
+                targetScrollLeft = overflow;
+            }
+
+            container.scrollLeft = targetScrollLeft;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                case 'PageUp':
+                    ensureWraparound(-200);
+                    break;
+                case 'ArrowRight':
+                case 'ArrowDown':
+                case 'PageDown':
+                    ensureWraparound(200);
+                    break;
+                default:
+                    return;
             }
         });
 
