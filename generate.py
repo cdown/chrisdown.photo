@@ -139,9 +139,8 @@ def generate_gallery_html(content):
             data_attrs_str = " ".join(data_attrs)
             html += (
                 f'<div class="gallery-item">'
-                f'<a href="{item["flickr"]}">'
                 f'<img src="" {data_attrs_str} alt="{image_data.title}" class="gallery-image">'
-                "</a></div>"
+                "</div>"
             )
         if "text" in item:
             text_html = "</p><p class='gallery-text'>".join(item["text"])
