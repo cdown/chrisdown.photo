@@ -213,9 +213,6 @@
             items.forEach(item => galleryContainer.appendChild(item.cloneNode(true)));
         }
 
-        /**
-         * Wrap-around logic for continuous horizontal scrolling.
-         */
         function wrapScroll() {
             const totalWidth = galleryContainer.scrollWidth / 2;
             if (galleryContainer.scrollLeft >= totalWidth) {
@@ -225,10 +222,6 @@
             }
         }
 
-        /**
-         * Called when user scrolls via mouse wheel or keyboard,
-         * calculates the new target scroll position while wrapping.
-         */
         function ensureWraparound(scrollAmount) {
             const totalWidth = galleryContainer.scrollWidth / 2;
             let targetScrollLeft = galleryContainer.scrollLeft + scrollAmount;
@@ -244,9 +237,6 @@
             galleryContainer.scrollLeft = targetScrollLeft;
         }
 
-        /**
-         * Fades out the scroll hint animation after one iteration.
-         */
         function fadeOutScrollHint() {
             if (fadedOut) return;
             fadedOut = true;
@@ -259,10 +249,6 @@
             scrollHint.addEventListener('animationiteration', stopAnimation);
         }
 
-        /**
-         * Determines the appropriate image height to load and updates
-         * the src of images that can benefit from a higher resolution.
-         */
         function loadBiggerImagesIfNeeded() {
             const screenHeightMinusNavbar = window.innerHeight - 50;
             let newChosenHeight = 0;
@@ -290,9 +276,6 @@
             }
         }
 
-        /**
-         * Adjust scroll hint arrow direction based on device pointer type.
-         */
         function setScrollHintDirection() {
             const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
             if (isTouchDevice) {
@@ -303,18 +286,12 @@
             }
         }
 
-        /**
-         * Wheel scrolling.
-         */
         document.addEventListener('wheel', e => {
             fadeOutScrollHint();
             const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
             ensureWraparound(scrollAmount);
         });
 
-        /**
-         * Keyboard navigation.
-         */
         document.addEventListener('keydown', e => {
             fadeOutScrollHint();
             switch (e.key) {
@@ -331,24 +308,15 @@
             }
         });
 
-        /**
-         * galleryContainer scroll event to handle wrap-around.
-         */
         galleryContainer.addEventListener('scroll', () => {
             fadeOutScrollHint();
             wrapScroll();
         });
 
-        /**
-         * Scroll hint click to nudge the gallery.
-         */
         scrollHint.addEventListener('click', () => {
             galleryContainer.scrollBy({ left: 200, behavior: 'smooth' });
         });
 
-        /**
-         * Run on DOMContentLoaded.
-         */
         function showSection(hash) {
             if (hash === '#about') {
                 galleryContainer.style.display = 'none';
@@ -367,9 +335,6 @@
             setScrollHintDirection();
         });
 
-        /**
-         * Window resize handling.
-         */
         window.addEventListener('resize', () => {
             loadBiggerImagesIfNeeded();
         });
