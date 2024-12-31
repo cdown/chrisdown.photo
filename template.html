@@ -13,10 +13,6 @@
     <meta property="og:image" content="https://live.staticflickr.com/65535/53436051798_e570d53c2a_b.jpg">
     <meta name="twitter:card" content="summary">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
-
     <style>
         @font-face {
             font-family: 'Geomanist';
@@ -26,22 +22,29 @@
         }
 
         :root {
+            --navbar-height: 40px;
+            --navbar-padding: 0px;
+            --font-primary: 'Geomanist', sans-serif;
+            --text-color: #333;
+            --text-color-hover: #aaa;
+            --transition-duration: 0.3s;
+            --scroll-hint-size: 48px;
             scroll-behavior: smooth;
         }
 
 
         body {
             margin: 0;
-            font-family: 'Geomanist', sans-serif;
+            font-family: var(--font-primary);
         }
 
         .navbar {
-            padding: 10px;
+            padding: var(--navbar-padding);
             display: flex;
             justify-content: space-between;
             align-items: center;
             top: 0;
-            height: 40px;
+            height: var(--navbar-height);
             margin: 0;
         }
 
@@ -56,18 +59,18 @@
             padding: 6px 20px;
             text-transform: lowercase;
             font-size: 20px;
-            color: #333;
+            color: var(--text-color);
             text-decoration: none;
         }
 
         .navbar-menu-item a:hover {
-            color: #aaa;
+            color: var(--text-color-hover);
         }
 
         .navbar-title {
             text-transform: lowercase;
             font-size: 20px;
-            color: #333;
+            color: var(--text-color);
             text-decoration: none;
         }
 
@@ -78,7 +81,6 @@
         .navbar-title-short {
             display: none;
         }
-
         @media (max-width: 500px) {
             .navbar-title-full {
                 display: none;
@@ -90,7 +92,7 @@
 
         .gallery-container {
             position: absolute;
-            top: 60px; /* navbar */
+            top: calc(var(--navbar-height) + var(--navbar-padding));
             left: 0;
             right: 0;
             bottom: 0;
@@ -124,22 +126,21 @@
                 opacity: 0;
             }
         }
-
         @keyframes arrowDownwards {
             0% {
-                transform: translateX(0) translateY(-50px);
+                transform: translateX(0) translateY(-25px);
                 opacity: 0;
             }
             25% {
-                transform: translateX(0) translateY(-50px);
+                transform: translateX(0) translateY(-25px);
                 opacity: 1;
             }
             75% {
-                transform: translateX(0) translateY(50px);
+                transform: translateX(0) translateY(25px);
                 opacity: 1;
             }
             100% {
-                transform: translateX(0) translateY(50px);
+                transform: translateX(0) translateY(25px);
                 opacity: 0;
             }
         }
@@ -153,133 +154,83 @@
             background: none;
             color: #fff;
             text-shadow: -2px 0 #000, 0 2px #000, 2px 0 #000, 0 -2px #000;
-            font-size: 48px;
+            font-size: var(--scroll-hint-size);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             animation: arrowSideways 1.5s infinite;
-            transition: opacity 0.3s ease; /* Smooth fade-out effect over 0.3 seconds */
+            transition: opacity var(--transition-duration) ease;
         }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <ul class="navbar-menu">
-            <li class="navbar-menu-item"><a href="/">Gallery</a></li>
+            <li class="navbar-menu-item">
+                <a href="/">Gallery</a>
+            </li>
         </ul>
         <a href="/" class="navbar-title navbar-title-full">Chris Down Photography</a>
         <a href="/" class="navbar-title navbar-title-short">Chris Down</a>
         <ul class="navbar-menu">
-            <li class="navbar-menu-item"><a href="/about">about</a></li>
-            <li class="navbar-menu-item"><a href="https://chrisdown.name/">tech</a></li>
+            <li class="navbar-menu-item">
+                <a href="/about">about</a>
+            </li>
+            <li class="navbar-menu-item">
+                <a href="https://chrisdown.name/">tech</a>
+            </li>
         </ul>
     </nav>
+
     <div class="gallery-container" id="gallery-container">{{ gallery_items }}</div>
+
     <div class="scroll-hint" id="scroll-hint">&#x2192;</div>
+
     <script>
         const container = document.getElementById('gallery-container');
         const scrollHint = document.getElementById('scroll-hint');
-
         let isDragging = false;
         let startX = 0;
         let scrollLeft = 0;
-        let userInteracted = false;
 
+        let userInteracted = false;
+        let fadedOut = false;
+        let currentChosenHeight = 0;
+        const availableHeights = [1080, 1440, 2160];
+
+        /**
+         * Duplicate gallery items to achieve wrap-around scrolling.
+         */
         function duplicateContent() {
-            console.debug("Duplicating content for wraparound");
             const items = Array.from(container.children);
-            items.forEach(item => {
-                const clone = item.cloneNode(true);
-                container.appendChild(clone);
-            });
+            items.forEach(item => container.appendChild(item.cloneNode(true)));
         }
 
+        /**
+         * Wrap-around logic for continuous horizontal scrolling.
+         */
         function wrapScroll() {
             const totalWidth = container.scrollWidth / 2;
             if (container.scrollLeft >= totalWidth) {
-                console.debug("Scrolled past the midpoint, wrapping around");
                 container.scrollLeft -= totalWidth;
             } else if (container.scrollLeft <= 0) {
-                console.debug("Scrolled before the start, wrapping around");
                 container.scrollLeft += totalWidth;
             }
         }
 
-        container.addEventListener('scroll', () => {
-            userInteracted = true;
-            fadeOutScrollHint();
-            wrapScroll();
-        });
-
-        container.addEventListener('mousedown', (e) => {
-            console.debug("Mouse down on gallery");
-            userInteracted = true;
-            fadeOutScrollHint();
-            isDragging = true;
-            startX = e.pageX - container.offsetLeft;
-            scrollLeft = container.scrollLeft;
-        });
-
-        container.addEventListener('mouseleave', () => {
-            console.debug("Mouse left the gallery");
-            isDragging = false;
-        });
-
-        container.addEventListener('mouseup', () => {
-            console.debug("Mouse up on gallery");
-            isDragging = false;
-        });
-
-        container.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-            const x = e.pageX - container.offsetLeft;
-            const walk = (x - startX) * 2;
-            container.scrollLeft = scrollLeft - walk;
-        });
-
-        document.addEventListener('wheel', (e) => {
-            userInteracted = true;
-            fadeOutScrollHint();
-            let scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
-            ensureWraparound(scrollAmount);
-        });
-
-        document.addEventListener('keydown', (e) => {
-            console.debug("Key pressed: ", e.key);
-            userInteracted = true;
-            fadeOutScrollHint();
-            switch(e.key) {
-                case 'ArrowLeft':
-                case 'ArrowUp':
-                case 'PageUp':
-                    console.debug("Scrolling left");
-                    ensureWraparound(-200);
-                    break;
-                case 'ArrowRight':
-                case 'ArrowDown':
-                case 'PageDown':
-                    console.debug("Scrolling right");
-                    ensureWraparound(200);
-                    break;
-                default:
-                    console.debug("Unhandled key press");
-                    return;
-            }
-        });
-
+        /**
+         * Called when user scrolls via mouse wheel or keyboard,
+         * calculates the new target scroll position while wrapping.
+         */
         function ensureWraparound(scrollAmount) {
             const totalWidth = container.scrollWidth / 2;
-
             let targetScrollLeft = container.scrollLeft + scrollAmount;
 
             if (targetScrollLeft < 0) {
-                console.debug("Scroll underflow, adjusting");
                 const underflow = Math.abs(targetScrollLeft);
                 targetScrollLeft = totalWidth - underflow;
             } else if (targetScrollLeft >= totalWidth) {
-                console.debug("Scroll overflow, adjusting");
                 const overflow = targetScrollLeft - totalWidth;
                 targetScrollLeft = overflow;
             }
@@ -287,102 +238,160 @@
             container.scrollLeft = targetScrollLeft;
         }
 
-        duplicateContent();
-
-        scrollHint.addEventListener('click', () => {
-            console.debug("Scroll hint clicked");
-            container.scrollBy({ left: 200, behavior: 'smooth' });
-        });
-
-        let fadedOut = false;
-
+        /**
+         * Fades out the scroll hint animation after one iteration.
+         */
         function fadeOutScrollHint() {
-            if (fadedOut) {
-                return;
-            }
+            if (fadedOut) return;
             fadedOut = true;
 
-            console.debug("Fading scroll hint after current animation round");
-
             const stopAnimation = () => {
-                console.debug("Animation round complete, stopping animation");
                 scrollHint.style.animation = 'none';
                 scrollHint.style.opacity = '0';
                 scrollHint.removeEventListener('animationiteration', stopAnimation);
             };
-
             scrollHint.addEventListener('animationiteration', stopAnimation);
         }
 
-        let checkUserInteraction = setInterval(() => {
-            if (userInteracted) {
-                console.debug("User interaction detected, clearing interval");
-                clearInterval(checkUserInteraction);
-                fadeOutScrollHint();
-            }
-        }, 100);
-
-        let currentChosenHeight = 0;
-        const availableHeights = [1080, 1440, 2160];
-
+        /**
+         * Determines the appropriate image height to load and updates
+         * the src of images that can benefit from a higher resolution.
+         */
         function loadBiggerImagesIfNeeded() {
-            console.debug("Checking which size of images are needed");
             const screenHeightMinusNavbar = window.innerHeight - 50;
             let newChosenHeight = 0;
 
-            for (let i = 0; i < availableHeights.length; i++) {
-                if (screenHeightMinusNavbar <= availableHeights[i]) {
-                    newChosenHeight = availableHeights[i];
+            for (const h of availableHeights) {
+                if (screenHeightMinusNavbar <= h) {
+                    newChosenHeight = h;
                     break;
                 }
             }
 
-            console.debug("Non-navbar height: %d, chosen image height: %d", screenHeightMinusNavbar, newChosenHeight);
-
-            if (newChosenHeight == 0) {
-                console.debug("Couldn't find a large enough image, doing fallback");
+            if (newChosenHeight === 0) {
                 newChosenHeight = availableHeights[availableHeights.length - 1];
             }
 
             if (newChosenHeight > currentChosenHeight) {
-                console.debug("This is larger than current image height, loading");
                 currentChosenHeight = newChosenHeight;
                 const images = document.querySelectorAll('.gallery-image');
                 images.forEach(img => {
                     const path = img.getAttribute(`data-${newChosenHeight}`);
                     if (path) {
-                        console.debug("Loading image: ", path);
                         img.src = path;
                     }
                 });
-            } else {
-                console.debug("This is within current image height, continuing to use %d", currentChosenHeight);
             }
         }
 
-        const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
-
+        /**
+         * Adjust scroll hint arrow direction based on device pointer type.
+         */
         function setScrollHintDirection() {
+            const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
             if (isTouchDevice) {
-                console.debug("Using touch device scroll hint");
                 scrollHint.innerHTML = '&#x2192;';
             } else {
-                console.debug("Using desktop device scroll hint");
                 scrollHint.innerHTML = '&#x2193;';
                 scrollHint.style.animation = 'arrowDownwards 1.5s infinite';
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            console.debug("DOMContentLoaded event fired");
+        /**
+         * Mouse and touch handling for click-and-drag scrolling.
+         */
+        container.addEventListener('mousedown', e => {
+            userInteracted = true;
+            fadeOutScrollHint();
+            isDragging = true;
+            startX = e.pageX - container.offsetLeft;
+            scrollLeft = container.scrollLeft;
+        });
+        container.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+        container.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        container.addEventListener('mousemove', e => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const walk = (x - startX) * 2;
+            container.scrollLeft = scrollLeft - walk;
+        });
+
+        /**
+         * Wheel scrolling.
+         */
+        document.addEventListener('wheel', e => {
+            userInteracted = true;
+            fadeOutScrollHint();
+            const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
+            ensureWraparound(scrollAmount);
+        });
+
+        /**
+         * Keyboard navigation.
+         */
+        document.addEventListener('keydown', e => {
+            userInteracted = true;
+            fadeOutScrollHint();
+            switch (e.key) {
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                case 'PageUp':
+                    ensureWraparound(-200);
+                    break;
+                case 'ArrowRight':
+                case 'ArrowDown':
+                case 'PageDown':
+                    ensureWraparound(200);
+                    break;
+            }
+        });
+
+        /**
+         * Container scroll event to handle wrap-around.
+         */
+        container.addEventListener('scroll', () => {
+            userInteracted = true;
+            fadeOutScrollHint();
+            wrapScroll();
+        });
+
+        /**
+         * Scroll hint click to nudge the gallery.
+         */
+        scrollHint.addEventListener('click', () => {
+            container.scrollBy({ left: 200, behavior: 'smooth' });
+        });
+
+        /**
+         * Check for user interaction periodically to fade out hint.
+         */
+        const checkUserInteraction = setInterval(() => {
+            if (userInteracted) {
+                clearInterval(checkUserInteraction);
+                fadeOutScrollHint();
+            }
+        }, 100);
+
+        /**
+         * Run on DOMContentLoaded.
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            duplicateContent();
             loadBiggerImagesIfNeeded();
             setScrollHintDirection();
         });
-        window.addEventListener('resize', function() {
-            console.debug("Window resize event detected");
+
+        /**
+         * Window resize handling.
+         */
+        window.addEventListener('resize', () => {
             loadBiggerImagesIfNeeded();
         });
     </script>
 </body>
 </html>
-
