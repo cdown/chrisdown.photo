@@ -269,13 +269,19 @@
     <script>
         const galleryContainer = document.getElementById('gallery-container');
         const scrollHint = document.getElementById('scroll-hint');
+
         let isDragging = false;
         let startX = 0;
         let scrollLeft = 0;
 
+        // Variables for momentum
+        let lastX = 0;
+        let lastTime = 0;
+        let velocity = 0;
+        let momentumID = null; // requestAnimationFrame ID
+
         let fadedOut = false;
         let currentChosenHeight = 0;
-
         let images = [];
 
         // This will store pairs of indexes, e.g. [[0, n], [1, n+1], [n-1, 2n-1], ...]
@@ -470,6 +476,25 @@
             }
         }
 
+        /**
+         * Animate momentum after touch release, applying friction until velocity is nearly 0.
+         */
+        function momentumScroll() {
+            if (Math.abs(velocity) < 0.01) {
+                velocity = 0;
+                return;
+            }
+            // Move by velocity * 16 ~ (16ms frame)
+            ensureWraparound(-velocity * 16);
+            wrapScroll();
+
+            // Apply friction
+            velocity *= 0.95;
+
+            momentumID = requestAnimationFrame(momentumScroll);
+        }
+
+        // Mouse/trackpad wheel & keyboard
         document.addEventListener('wheel', e => {
             stopScrollHint();
             const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
@@ -501,6 +526,51 @@
             galleryContainer.scrollBy({ left: 200, behavior: 'smooth' });
         });
 
+        // Touch drag events for mobile or other touch devices
+        galleryContainer.addEventListener('touchstart', e => {
+            if (momentumID) {
+                cancelAnimationFrame(momentumID);
+                momentumID = null;
+            }
+            isDragging = true;
+            startX = e.touches[0].pageX - galleryContainer.offsetLeft;
+            scrollLeft = galleryContainer.scrollLeft;
+            lastX = startX;
+            lastTime = Date.now();
+            velocity = 0;
+            stopScrollHint();
+        });
+
+        galleryContainer.addEventListener('touchmove', e => {
+            if (!isDragging) return;
+            e.preventDefault();
+
+            const x = e.touches[0].pageX - galleryContainer.offsetLeft;
+            const dx = x - lastX;
+            const currentTime = Date.now();
+            const dt = currentTime - lastTime;
+
+            // net drag from initial position
+            const scrollDelta = scrollLeft + (startX - x) - galleryContainer.scrollLeft;
+            ensureWraparound(scrollDelta);
+
+            // Also do velocity for momentum
+            velocity = dx / dt;
+            lastX = x;
+            lastTime = currentTime;
+        });
+
+        galleryContainer.addEventListener('touchend', () => {
+            isDragging = false;
+            momentumID = requestAnimationFrame(momentumScroll);
+        });
+
+        galleryContainer.addEventListener('touchcancel', () => {
+            isDragging = false;
+            momentumID = requestAnimationFrame(momentumScroll);
+        });
+
+        // On load and on resize
         document.addEventListener('DOMContentLoaded', () => {
             duplicateContent();
             loadBiggerImagesIfNeeded();
