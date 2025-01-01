@@ -22,145 +22,215 @@
         }
 
         :root {
-            --navbar-height: 40px;
-            --navbar-padding: 0px;
-            --font-primary: 'Geomanist', sans-serif;
-            --text-color: #333;
-            --text-color-hover: #aaa;
-            --transition-duration: 0.3s;
-            --scroll-hint-size: 48px;
-            scroll-behavior: smooth;
+          --navbar-height: 40px;
+          --font-primary: 'Geomanist', sans-serif;
+          --text-color: #333;
+          --text-color-hover: #aaa;
+          --transition-duration: 0.3s;
+          --scroll-hint-size: 48px;
+          scroll-behavior: smooth;
         }
 
-
         body {
-            margin: 0;
-            font-family: var(--font-primary);
+          margin: 0;
+          font-family: var(--font-primary);
         }
 
         .navbar {
-            padding: var(--navbar-padding);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            top: 0;
-            height: var(--navbar-height);
-            margin: 0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          top: 0;
+          height: var(--navbar-height);
+          margin: 0;
         }
 
         .navbar-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
+          list-style: none;
         }
 
         .navbar-menu-item a {
-            padding: 6px 20px;
-            text-transform: lowercase;
-            font-size: 20px;
-            color: var(--text-color);
-            text-decoration: none;
+          padding: 6px 20px;
+          text-transform: lowercase;
+          font-size: 20px;
+          color: var(--text-color);
+          text-decoration: none;
         }
 
         .navbar-menu-item a:hover {
-            color: var(--text-color-hover);
+          color: var(--text-color-hover);
         }
 
         .navbar-title {
-            text-transform: lowercase;
-            font-size: 20px;
-            color: var(--text-color);
-            text-decoration: none;
+          text-transform: lowercase;
+          font-size: 20px;
+          color: var(--text-color);
+          text-decoration: none;
         }
 
         .navbar-title-full {
-            display: inline;
+          display: inline;
         }
 
         .navbar-title-short {
-            display: none;
+          display: none;
         }
+
         @media (max-width: 500px) {
-            .navbar-title-full {
-                display: none;
-            }
-            .navbar-title-short {
-                display: inline;
-            }
+          .navbar-title-full {
+            display: none;
+          }
+
+          .navbar-title-short {
+            display: inline;
+          }
         }
 
         .gallery-container {
-            position: absolute;
-            top: calc(var(--navbar-height) + var(--navbar-padding));
-            left: 0;
-            right: 0;
-            bottom: 0;
-            white-space: nowrap;
-            overflow: hidden;
+          position: absolute;
+          top: var(--navbar-height);
+          left: 0;
+          right: 0;
+          bottom: 0;
+          white-space: nowrap;
+          overflow: hidden;
         }
 
         .gallery-item {
-            display: inline-block;
-            height: 100%;
+          display: inline-block;
+          height: 100%;
         }
 
         .gallery-image {
-            height: 100%;
+          height: 100%;
         }
 
         @keyframes arrowSideways {
-            0% {
-                transform: translateX(-50px) translateY(-50%);
-                opacity: 0;
-            }
-            25% {
-                transform: translateX(-50px) translateY(-50%);
-                opacity: 1;
-            }
-            75% {
-                transform: translateX(0) translateY(-50%);
-                opacity: 1;
-            }
-            100% {
-                opacity: 0;
-            }
+          0% {
+            transform: translateX(-50px) translateY(-50%);
+            opacity: 0;
+          }
+
+          25% {
+            transform: translateX(-50px) translateY(-50%);
+            opacity: 1;
+          }
+
+          75% {
+            transform: translateX(0) translateY(-50%);
+            opacity: 1;
+          }
+
+          100% {
+            opacity: 0;
+          }
         }
+
         @keyframes arrowDownwards {
-            0% {
-                transform: translateX(0) translateY(-25px);
-                opacity: 0;
-            }
-            25% {
-                transform: translateX(0) translateY(-25px);
-                opacity: 1;
-            }
-            75% {
-                transform: translateX(0) translateY(25px);
-                opacity: 1;
-            }
-            100% {
-                transform: translateX(0) translateY(25px);
-                opacity: 0;
-            }
+          0% {
+            transform: translateX(0) translateY(-25px);
+            opacity: 0;
+          }
+
+          25% {
+            transform: translateX(0) translateY(-25px);
+            opacity: 1;
+          }
+
+          75% {
+            transform: translateX(0) translateY(25px);
+            opacity: 1;
+          }
+
+          100% {
+            transform: translateX(0) translateY(25px);
+            opacity: 0;
+          }
         }
 
         .scroll-hint {
-            position: fixed;
-            top: 50%;
-            right: 10px;
-            transform: translateY(-50%);
-            z-index: 1000;
-            background: none;
-            color: #fff;
-            text-shadow: -2px 0 #000, 0 2px #000, 2px 0 #000, 0 -2px #000;
-            font-size: var(--scroll-hint-size);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            animation: arrowSideways 1.5s infinite;
-            transition: opacity var(--transition-duration) ease;
+          position: fixed;
+          top: 50%;
+          right: 10px;
+          z-index: 1000;
+          color: #fff;
+          text-shadow: -2px 0 #000, 0 2px #000, 2px 0 #000, 0 -2px #000;
+          font-size: var(--scroll-hint-size);
+          cursor: pointer;
+          opacity: 0;
+        }
+
+        .about-content {
+          display: flex;
+        }
+
+        #about-link {
+          cursor: pointer;
+        }
+
+        .about-overlay {
+          position: fixed;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 70%;
+          max-width: 800px;
+          z-index: 1000;
+          visibility: hidden;
+          opacity: 0;
+          background-color: #fff;
+          padding: 20px;
+        }
+
+        .about-image {
+          max-width: 50%;
+          margin-right: 20px;
+          object-fit: contain;
+        }
+
+        .about-overlay.active {
+          visibility: visible;
+          opacity: 1;
+        }
+
+        .about-close {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: none;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          color: var(--text-color);
+        }
+
+
+        .about-text p {
+          margin: 0 0 10px;
+          line-height: 1.5;
+          color: var(--text-color);
+        }
+
+        @media (max-width: 700px) {
+          .about-content {
+            display: block;
+          }
+
+          .about-overlay {
+            width: 90%;
+            box-sizing: border-box;
+          }
+
+          .about-image {
+            margin: 0 auto 15px auto;
+            max-width: 100%;
+            display: block;
+          }
+
+          .about-text {
+            text-align: left;
+            margin: 0;
+          }
         }
     </style>
 </head>
@@ -175,27 +245,22 @@
         <a href="#gallery" class="navbar-title navbar-title-short">Chris Down</a>
         <ul class="navbar-menu">
             <li class="navbar-menu-item">
-                <a href="#about">about</a>
-            </li>
-            <li class="navbar-menu-item">
-                <a href="https://chrisdown.name/">tech</a>
+                <a id="about-link">About</a>
             </li>
         </ul>
     </nav>
 
     <div class="gallery-container" id="gallery-container">{{ gallery_items }}</div>
 
-    <div class="about-container" id="about-container">
-        <div style="text-align: center; max-width: 600px; font-size: 18px; color: var(--text-color);">
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam.</p>
-        </div>
+    <div class="about-overlay" id="about-overlay">
+        <button class="about-close" id="about-close">&times;</button>
+        {{ about }}
     </div>
 
     <div class="scroll-hint" id="scroll-hint">&#x2192;</div>
 
     <script>
         const galleryContainer = document.getElementById('gallery-container');
-        const aboutContainer = document.getElementById('about-container');
         const scrollHint = document.getElementById('scroll-hint');
         let isDragging = false;
         let startX = 0;
@@ -237,9 +302,13 @@
             galleryContainer.scrollLeft = targetScrollLeft;
         }
 
-        function fadeOutScrollHint() {
+        let storedAnimation = 'none';
+
+        function stopScrollHint() {
             if (fadedOut) return;
             fadedOut = true;
+
+            storedAnimation = scrollHint.style.animation;
 
             const stopAnimation = () => {
                 scrollHint.style.animation = 'none';
@@ -247,6 +316,14 @@
                 scrollHint.removeEventListener('animationiteration', stopAnimation);
             };
             scrollHint.addEventListener('animationiteration', stopAnimation);
+        }
+
+        function startScrollHint() {
+            fadedOut = false;
+            scrollHint.style.opacity = '1';
+            if (storedAnimation !== 'none') {
+                scrollHint.style.animation = storedAnimation;
+            }
         }
 
         function loadBiggerImagesIfNeeded() {
@@ -280,6 +357,7 @@
             const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
             if (isTouchDevice) {
                 scrollHint.innerHTML = '&#x2192;';
+                scrollHint.style.animation = 'arrowSideways 1.5s infinite';
             } else {
                 scrollHint.innerHTML = '&#x2193;';
                 scrollHint.style.animation = 'arrowDownwards 1.5s infinite';
@@ -287,13 +365,13 @@
         }
 
         document.addEventListener('wheel', e => {
-            fadeOutScrollHint();
+            stopScrollHint();
             const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
             ensureWraparound(scrollAmount);
         });
 
         document.addEventListener('keydown', e => {
-            fadeOutScrollHint();
+            stopScrollHint();
             switch (e.key) {
                 case 'ArrowLeft':
                 case 'ArrowUp':
@@ -309,7 +387,7 @@
         });
 
         galleryContainer.addEventListener('scroll', () => {
-            fadeOutScrollHint();
+            stopScrollHint();
             wrapScroll();
         });
 
@@ -317,19 +395,7 @@
             galleryContainer.scrollBy({ left: 200, behavior: 'smooth' });
         });
 
-        function showSection(hash) {
-            if (hash === '#about') {
-                galleryContainer.style.display = 'none';
-                aboutContainer.style.display = 'flex';
-            } else {
-                galleryContainer.style.display = 'block';
-                aboutContainer.style.display = 'none';
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
-            showSection(window.location.hash || '#gallery');
-            window.addEventListener('hashchange', () => showSection(window.location.hash));
             duplicateContent();
             loadBiggerImagesIfNeeded();
             setScrollHintDirection();
@@ -337,6 +403,24 @@
 
         window.addEventListener('resize', () => {
             loadBiggerImagesIfNeeded();
+        });
+
+        const aboutLink = document.getElementById('about-link');
+        const aboutOverlay = document.getElementById('about-overlay');
+        const aboutClose = document.getElementById('about-close');
+
+        aboutLink.addEventListener('click', () => {
+            aboutOverlay.classList.add('active');
+        });
+
+        aboutClose.addEventListener('click', () => {
+            aboutOverlay.classList.remove('active');
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === aboutOverlay) {
+                aboutOverlay.classList.remove('active');
+            }
         });
     </script>
 </body>
