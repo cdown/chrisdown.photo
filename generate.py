@@ -53,7 +53,7 @@ def download_image(image_url, temp_path):
 
 
 def process_image_for_height(temp_path, output_path, height, danger_of_banding):
-    quality = "100" if danger_of_banding else "90"
+    quality = "95" if danger_of_banding else "85"
 
     # If there's a danger of banding we do two things to try to mitigate it,
     # since we can't use 16-bit AVIF due to 8-bit rendering pipeline in

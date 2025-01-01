@@ -272,12 +272,10 @@
         let fadedOut = false;
         let currentChosenHeight = 0;
 
-        // We'll use these instead of a single currentIndex
         let images = [];
         let loadOrder = [];
         let loadOrderIndex = 0;
 
-        // Heights we'll try in sequence
         const availableHeights = [1080, 1440, 2160];
 
         /**
@@ -390,7 +388,6 @@
             }
         }
 
-        // Loads the next image in the custom load order
         function loadNextImage() {
             if (loadOrderIndex >= loadOrder.length) {
                 return;
