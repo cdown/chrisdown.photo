@@ -9,6 +9,8 @@ items:
     danger_of_banding: true
   - flickr: https://www.flickr.com/photos/chrisdown/53048593970
   - flickr: https://www.flickr.com/photos/chrisdown/53197452809
+  - flickr: https://www.flickr.com/photos/chrisdown/54163153372
+  - flickr: https://www.flickr.com/photos/chrisdown/53973825220
 
 about:
   text:
@@ -16,4 +18,4 @@ about:
     - I am grateful to have had my work featured in a variety of books and magazines, including those published by Springer, O'Reilly, and Menasha Ridge Press.
     - 'To explore more of my work, please visit my <a href="https://www.flickr.com/photos/chrisdown/albums/72157711447135721?layout=justified">portfolio on Flickr</a>.'
     - At present I am focusing on existing projects and am not hosting workshops or accepting commission work.
-  image: 'file://///wsl.localhost/Arch/home/cdown/git/chrisdown.photo/images/about.jpg'
+  image: 'images/about.jpg'
