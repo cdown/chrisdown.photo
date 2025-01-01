@@ -271,7 +271,13 @@
 
         let fadedOut = false;
         let currentChosenHeight = 0;
-        let currentIndex = 0;
+
+        // We'll use these instead of a single currentIndex
+        let images = [];
+        let loadOrder = [];
+        let loadOrderIndex = 0;
+
+        // Heights we'll try in sequence
         const availableHeights = [1080, 1440, 2160];
 
         /**
@@ -280,6 +286,32 @@
         function duplicateContent() {
             const items = Array.from(galleryContainer.children);
             items.forEach(item => galleryContainer.appendChild(item.cloneNode(true)));
+        }
+
+        // Produces the sequence: 0, 1, last, 2, second-last, 3, third-last, ...
+        function getLoadOrder(n) {
+            const order = [];
+            let left = 0;
+            let right = n - 1;
+            let i = 0;
+            // We keep going while left <= right
+            while (left <= right) {
+                if (i === 0 || i === 1) {
+                    // First two always from the left
+                    order.push(left);
+                    left++;
+                } else if (i % 2 === 0) {
+                    // Even index after the first two => from the right
+                    order.push(right);
+                    right--;
+                } else {
+                    // Odd index after the first two => from the left
+                    order.push(left);
+                    left++;
+                }
+                i++;
+            }
+            return order;
         }
 
         function wrapScroll() {
@@ -345,22 +377,30 @@
                 newChosenHeight = availableHeights[availableHeights.length - 1];
             }
 
+            // Only load larger images if we found a new bigger height
             if (newChosenHeight > currentChosenHeight) {
                 currentChosenHeight = newChosenHeight;
-                currentIndex = 0;
+
+                // Re-init load order and index
+                loadOrderIndex = 0;
+                images = Array.from(document.querySelectorAll('.gallery-image'));
+                loadOrder = getLoadOrder(images.length);
+
                 loadNextImage();
             }
         }
 
+        // Loads the next image in the custom load order
         function loadNextImage() {
-            const images = Array.from(document.querySelectorAll('.gallery-image'));
-            if (currentIndex >= images.length) return;
-
-            const image = images[currentIndex];
+            if (loadOrderIndex >= loadOrder.length) {
+                return;
+            }
+            const idx = loadOrder[loadOrderIndex];
+            const image = images[idx];
             const imagePath = image.getAttribute(`data-${currentChosenHeight}`);
 
             if (imagePath) {
-                console.debug(`Start loading image ${currentIndex}`);
+                console.debug(`Start loading image ${idx}`);
                 const img = new Image();
                 img.src = imagePath;
 
@@ -369,16 +409,19 @@
                     requestAnimationFrame(() => {
                         image.style.opacity = 1;
                     });
-                    console.debug(`Finished loading image ${currentIndex}`);
-                    currentIndex += 1;
+                    console.debug(`Finished loading image ${idx}`);
+                    loadOrderIndex += 1;
                     loadNextImage();
                 };
 
                 img.onerror = () => {
-                    console.debug(`Error loading image ${currentIndex}`);
-                    currentIndex += 1;
+                    console.debug(`Error loading image ${idx}`);
+                    loadOrderIndex += 1;
                     loadNextImage();
                 };
+            } else {
+                loadOrderIndex += 1;
+                loadNextImage();
             }
         }
 
