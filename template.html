@@ -102,8 +102,11 @@
           height: 100%;
         }
 
+        /* The aspect ratio is now injected inline via style="aspect-ratio: w/h" */
         .gallery-image {
           height: 100%;
+          width: 100%;
+          display: block;
           transition: opacity 0.5s ease-in-out;
           opacity: 0;
         }
@@ -273,8 +276,10 @@
         let currentChosenHeight = 0;
 
         let images = [];
-        let loadOrder = [];
-        let loadOrderIndex = 0;
+
+        // This will store pairs of indexes, e.g. [[0, n], [1, n+1], [n-1, 2n-1], ...]
+        let loadPairs = [];
+        let loadPairsIndex = 0;
 
         const availableHeights = [1080, 1440, 2160];
 
@@ -286,30 +291,97 @@
             items.forEach(item => galleryContainer.appendChild(item.cloneNode(true)));
         }
 
-        // Produces the sequence: 0, 1, last, 2, second-last, 3, third-last, ...
-        function getLoadOrder(n) {
-            const order = [];
-            let left = 0;
-            let right = n - 1;
+        /**
+         * Generate an offset sequence like [0, 1, -1, 2, -2, 3, -3, ...]
+         * stopping when we've listed all offsets for the original n images.
+         */
+        function generateOffsets(n) {
+            const offsets = [];
             let i = 0;
-            // We keep going while left <= right
-            while (left <= right) {
-                if (i === 0 || i === 1) {
-                    // First two always from the left
-                    order.push(left);
-                    left++;
-                } else if (i % 2 === 0) {
-                    // Even index after the first two => from the right
-                    order.push(right);
-                    right--;
+            while (i < n) {
+                if (i === 0) {
+                    offsets.push(0);
                 } else {
-                    // Odd index after the first two => from the left
-                    order.push(left);
-                    left++;
+                    offsets.push(i);
+                    if (i <= n - 1) {
+                        offsets.push(-i);
+                    }
                 }
                 i++;
             }
-            return order;
+            return offsets;
+        }
+
+        /**
+         * Build loadPairs as pairs of [originalIndex, duplicateIndex] in the order:
+         *   0 & 0+n,
+         *   1 & 1+n,
+         *   (n-1) & (n-1)+n,
+         *   2 & 2+n,
+         *   (n-2) & (n-2)+n,
+         *   etc.
+         */
+        function buildLoadPairs() {
+            loadPairs = [];
+            loadPairsIndex = 0;
+
+            // n is half of the total images because they have been duplicated.
+            // So we only consider the first half as "unique" images.
+            const n = images.length / 2;
+            const offsets = generateOffsets(n);
+
+            for (const offset of offsets) {
+                // If offset >= 0, realIndex is offset; if offset < 0, realIndex is n + offset
+                const realIndex = offset >= 0 ? offset : n + offset;
+                // The duplicate index is always realIndex + n (wrapping around if needed)
+                const duplicateIndex = realIndex < n ? realIndex + n : realIndex - n;
+                loadPairs.push([realIndex, duplicateIndex]);
+            }
+        }
+
+        /**
+         * Load the next pair of images (one original + its duplicate) in parallel,
+         * then move on to the next pair when both complete or error out.
+         */
+        function loadNextPair() {
+            if (loadPairsIndex >= loadPairs.length) {
+                return;
+            }
+            const pair = loadPairs[loadPairsIndex];
+            let completedCount = 0;
+
+            // Callback to be called when one image finishes or errors
+            const handleSingleImageComplete = () => {
+                completedCount++;
+                if (completedCount === 2) {
+                    loadPairsIndex += 1;
+                    loadNextPair();
+                }
+            };
+
+            // Load both images in the pair
+            for (const idx of pair) {
+                const image = images[idx];
+                const imagePath = image.getAttribute(`data-${currentChosenHeight}`);
+                if (!imagePath) {
+                    handleSingleImageComplete();
+                    continue;
+                }
+
+                const img = new Image();
+                img.src = imagePath;
+
+                img.onload = () => {
+                    image.src = imagePath;
+                    requestAnimationFrame(() => {
+                        image.style.opacity = 1;
+                    });
+                    handleSingleImageComplete();
+                };
+                img.onerror = () => {
+                    handleSingleImageComplete();
+                };
+            }
         }
 
         function wrapScroll() {
@@ -375,50 +447,14 @@
                 newChosenHeight = availableHeights[availableHeights.length - 1];
             }
 
-            // Only load larger images if we found a new bigger height
+            // Only load larger images if a bigger height is found than before
             if (newChosenHeight > currentChosenHeight) {
                 currentChosenHeight = newChosenHeight;
 
-                // Re-init load order and index
-                loadOrderIndex = 0;
+                // Re-init everything
                 images = Array.from(document.querySelectorAll('.gallery-image'));
-                loadOrder = getLoadOrder(images.length);
-
-                loadNextImage();
-            }
-        }
-
-        function loadNextImage() {
-            if (loadOrderIndex >= loadOrder.length) {
-                return;
-            }
-            const idx = loadOrder[loadOrderIndex];
-            const image = images[idx];
-            const imagePath = image.getAttribute(`data-${currentChosenHeight}`);
-
-            if (imagePath) {
-                console.debug(`Start loading image ${idx}`);
-                const img = new Image();
-                img.src = imagePath;
-
-                img.onload = () => {
-                    image.src = imagePath;
-                    requestAnimationFrame(() => {
-                        image.style.opacity = 1;
-                    });
-                    console.debug(`Finished loading image ${idx}`);
-                    loadOrderIndex += 1;
-                    loadNextImage();
-                };
-
-                img.onerror = () => {
-                    console.debug(`Error loading image ${idx}`);
-                    loadOrderIndex += 1;
-                    loadNextImage();
-                };
-            } else {
-                loadOrderIndex += 1;
-                loadNextImage();
+                buildLoadPairs();
+                loadNextPair();
             }
         }
 
