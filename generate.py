@@ -127,7 +127,7 @@ def get_flickr_image(flickr_url, danger_of_banding=False):
 
 def generate_gallery_html(content):
     html = ""
-    for item in content["items"]:
+    for index, item in enumerate(content["items"]):
         if "flickr" in item:
             print(f"Processing gallery item: {item['flickr']}")
             image_data = get_flickr_image(
@@ -138,9 +138,9 @@ def generate_gallery_html(content):
                 data_attrs.append(f'data-{h}="{image_data.sizes[str(h)]}"')
             data_attrs_str = " ".join(data_attrs)
             html += (
-                f'<div class="gallery-item">'
+                f'<div class="gallery-item" data-index="{index}">'
                 f'<img src="" {data_attrs_str} alt="{image_data.title}" class="gallery-image">'
-                "</div>"
+                f"</div>"
             )
         if "text" in item:
             text_html = "</p><p class='gallery-text'>".join(item["text"])
