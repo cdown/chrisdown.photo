@@ -8,7 +8,7 @@ import subprocess
 from selectolax.parser import HTMLParser
 from collections import namedtuple
 
-FlickrImageData = namedtuple("FlickrImageData", ["title", "sizes"])
+FlickrImageData = namedtuple("FlickrImageData", ["title", "sizes", "width", "height"])
 CACHE_FILE = "image_titles_cache.json"
 IMG_DIR = "images"
 
@@ -52,6 +52,24 @@ def download_image(image_url, temp_path):
         file.write(response.content)
 
 
+def get_local_image_dimensions(image_path):
+    try:
+        result = subprocess.run(
+            ["identify", "-format", "%w %h", image_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+        width_str, height_str = result.stdout.strip().split()
+        width, height = int(width_str), int(height_str)
+        if width <= 0 or height <= 0:
+            raise ValueError(f"Invalid dimensions for {image_path}")
+        return width, height
+    except Exception as e:
+        raise ValueError(f"Could not determine image dimensions from {image_path}") from e
+
+
 def process_image_for_height(temp_path, output_path, height, danger_of_banding):
     quality = "95" if danger_of_banding else "85"
 
@@ -85,13 +103,13 @@ def process_image_for_height(temp_path, output_path, height, danger_of_banding):
 
 def get_flickr_image(flickr_url, danger_of_banding=False):
     photo_id = extract_photo_id(flickr_url)
-    title_cache = load_cache()
-    image_title = title_cache.get(photo_id, None)
-    sizes = {}
+    cache = load_cache()
+    image_info = cache.get(photo_id, {})
+    image_title = image_info.get("title")
+    image_width = image_info.get("width")
+    image_height = image_info.get("height")
 
-    # We store references to e.g. images/<photo_id>_1080.avif, etc.
-    # If not all sizes exist, fetch image and create them
-    # Otherwise, if they're on disk, just skip re-download
+    sizes = {}
     missing_sizes = []
     for h in IMG_HEIGHTS:
         path_for_height = f"{IMG_DIR}/{photo_id}_{h}.avif"
@@ -99,30 +117,42 @@ def get_flickr_image(flickr_url, danger_of_banding=False):
         if not os.path.exists(path_for_height):
             missing_sizes.append(h)
 
-    if missing_sizes or image_title is None:
-        # Need to either fetch or generate images
-        if image_title is None:
-            fetched_title, image_url = fetch_image_data(flickr_url)
-            title_cache[photo_id] = fetched_title
-            save_cache(title_cache)
-        else:
-            # We already have the title, but we still need the URL for re-downloading
-            _, image_url = fetch_image_data(flickr_url)
+    # We need to download if missing sizes OR we don't have dimension/title yet
+    if missing_sizes or image_title is None or image_width is None or image_height is None:
+        fetched_title, image_url = fetch_image_data(flickr_url)
 
-        image_title = title_cache[photo_id]
+        # Download the original image so we can find out its dimensions
         os.makedirs(IMG_DIR, exist_ok=True)
-
         temp_path = f"{IMG_DIR}/{photo_id}_temp.jpg"
         download_image(image_url, temp_path)
+        width, height = get_local_image_dimensions(temp_path)
 
-        for h in missing_sizes:
-            avif_path = f"{IMG_DIR}/{photo_id}_{h}.avif"
-            process_image_for_height(temp_path, avif_path, h, danger_of_banding)
+        # Update in-memory cache
+        image_info["title"] = fetched_title
+        image_info["width"] = width
+        image_info["height"] = height
+        cache[photo_id] = image_info
+        save_cache(cache)
+
+        # For newly missing sizes, do the conversion
+        for h_val in missing_sizes:
+            avif_path = f"{IMG_DIR}/{photo_id}_{h_val}.avif"
+            process_image_for_height(temp_path, avif_path, h_val, danger_of_banding)
 
         os.remove(temp_path)
+    else:
+        # Use cached values
+        fetched_title = image_info["title"]
+        width = image_info["width"]
+        height = image_info["height"]
 
     print(f"Completed processing for {flickr_url}")
-    return FlickrImageData(title=image_title, sizes=sizes)
+    return FlickrImageData(
+        title=fetched_title,
+        sizes=sizes,
+        width=width,
+        height=height
+    )
 
 
 def generate_gallery_html(content):
@@ -137,9 +167,11 @@ def generate_gallery_html(content):
             for h in IMG_HEIGHTS:
                 data_attrs.append(f'data-{h}="{image_data.sizes[str(h)]}"')
             data_attrs_str = " ".join(data_attrs)
+            aspect_ratio = f"{image_data.width}/{image_data.height}"
+
             html += (
                 f'<div class="gallery-item" data-index="{index}">'
-                f'<img src="" {data_attrs_str} alt="{image_data.title}" class="gallery-image">'
+                f'<img src="" style="aspect-ratio: {aspect_ratio};" {data_attrs_str} alt="{image_data.title}" class="gallery-image">'
                 f"</div>"
             )
         if "text" in item:
