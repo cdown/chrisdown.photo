@@ -462,6 +462,7 @@
             const stopAnimation = () => {
                 scrollHint.style.animation = 'none';
                 scrollHint.style.opacity = '0';
+                scrollHint.style.visibility = 'hidden';
                 scrollHint.removeEventListener('animationiteration', stopAnimation);
                 scrollHint.removeEventListener('webkitAnimationIteration', stopAnimation);
             };
@@ -472,6 +473,7 @@
         function startScrollHint() {
             fadedOut = false;
             scrollHint.style.opacity = '1';
+            scrollHint.style.visibility = 'visible';
             if (storedAnimation !== 'none') {
                 scrollHint.style.animation = storedAnimation;
             }
