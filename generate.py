@@ -12,8 +12,10 @@ FlickrImageData = namedtuple("FlickrImageData", ["title", "sizes", "width", "hei
 CACHE_FILE = "image_titles_cache.json"
 IMG_DIR = "images"
 
-IMG_HEIGHTS = [1080, 1440, 2160]
-
+# Minus the navbar height (40) for common resolutions
+NAVBAR_HEIGHT = 40
+IMG_HEIGHTS = [1080, 1440, 1800, 2160]
+IMG_HEIGHTS = [x - NAVBAR_HEIGHT for x in IMG_HEIGHTS]
 
 def load_cache():
     if os.path.exists(CACHE_FILE):
