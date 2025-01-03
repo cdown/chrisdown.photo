@@ -645,6 +645,7 @@
         aboutLink.addEventListener('click', () => {
             aboutOverlay.classList.add('active');
             document.body.style.overflow = 'hidden';
+            stopScrollHint();
         });
 
         aboutClose.addEventListener('click', () => {
