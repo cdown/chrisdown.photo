@@ -268,6 +268,30 @@
     <div class="scroll-hint" id="scroll-hint">&#x2192;</div>
 
     <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const debugMode = urlParams.get('debug') === '1';
+        let debugBox = null;
+
+        if (debugMode) {
+            debugBox = document.createElement('div');
+            debugBox.style.position = 'fixed';
+            debugBox.style.top = '0';
+            debugBox.style.right = '0';
+            debugBox.style.backgroundColor = '#fff';
+            debugBox.style.border = '1px solid #333';
+            debugBox.style.padding = '10px';
+            debugBox.style.zIndex = '9999';
+            debugBox.style.color = '#000';
+            debugBox.style.fontFamily = 'monospace';
+            document.body.appendChild(debugBox);
+        }
+
+        function updateDebug() {
+            if (debugBox) {
+                debugBox.innerText = 'g_off: ' + galleryContainer.scrollLeft + '\nvelocity: ' + velocity;
+            }
+        }
+
         const galleryContainer = document.getElementById('gallery-container');
         const scrollHint = document.getElementById('scroll-hint');
 
@@ -490,6 +514,7 @@
             // Move by velocity * 16 ~ (16ms frame)
             ensureWraparound(-velocity * 16);
             wrapScroll();
+            updateDebug();
 
             // Apply friction
             velocity *= 0.95;
@@ -502,6 +527,8 @@
             stopScrollHint();
             const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
             ensureWraparound(scrollAmount);
+            wrapScroll();
+            updateDebug();
         });
 
         document.addEventListener('keydown', e => {
@@ -518,15 +545,19 @@
                     ensureWraparound(200);
                     break;
             }
+            wrapScroll();
+            updateDebug();
         });
 
         galleryContainer.addEventListener('scroll', () => {
             stopScrollHint();
             wrapScroll();
+            updateDebug();
         });
 
         scrollHint.addEventListener('click', () => {
             galleryContainer.scrollBy({ left: 200, behavior: 'smooth' });
+            updateDebug();
         });
 
         // Touch drag events for mobile or other touch devices
@@ -542,6 +573,7 @@
             lastTime = Date.now();
             velocity = 0;
             stopScrollHint();
+            updateDebug();
         });
 
         galleryContainer.addEventListener('touchmove', e => {
@@ -556,11 +588,13 @@
             // net drag from initial position
             const scrollDelta = scrollLeft + (startX - x) - galleryContainer.scrollLeft;
             ensureWraparound(scrollDelta);
+            wrapScroll();
 
             // Also do velocity for momentum
             velocity = dx / dt;
             lastX = x;
             lastTime = currentTime;
+            updateDebug();
         });
 
         galleryContainer.addEventListener('touchend', () => {
