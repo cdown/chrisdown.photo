@@ -518,6 +518,7 @@
         function momentumScroll() {
             if (Math.abs(velocity) < 0.01) {
                 velocity = 0;
+                momentumID = null;
                 return;
             }
             ensureWraparound(-velocity * 16);
