@@ -28,7 +28,6 @@
           --text-color-hover: #aaa;
           --transition-duration: 0.3s;
           --scroll-hint-size: 48px;
-          scroll-behavior: smooth;
         }
 
         body {
@@ -528,15 +527,14 @@
             momentumID = requestAnimationFrame(momentumScroll);
         }
 
-        document.addEventListener('wheel', e => {
-            if (aboutOverlay.classList.contains('active')) {
-                // Prevent gallery scrolling if about is open
-                return;
-            }
+        galleryContainer.addEventListener('wheel', e => {
+            e.preventDefault();
             stopScrollHint();
             const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
-            ensureWraparound(scrollAmount);
-            wrapScroll();
+            velocity -= scrollAmount * 0.01;
+            if (!momentumID) {
+                momentumID = requestAnimationFrame(momentumScroll);
+            }
             updateDebug();
         });
 
@@ -574,7 +572,7 @@
         });
 
         galleryContainer.addEventListener('touchstart', e => {
-            if (document.getElementById('about-overlay').classList.contains('active')) {
+            if (aboutOverlay.classList.contains('active')) {
                 // Prevent gallery scrolling if about is open
                 return;
             }
@@ -593,7 +591,7 @@
         });
 
         galleryContainer.addEventListener('touchmove', e => {
-            if (document.getElementById('about-overlay').classList.contains('active')) {
+            if (aboutOverlay.classList.contains('active')) {
                 // Prevent gallery scrolling if about is open
                 return;
             }
