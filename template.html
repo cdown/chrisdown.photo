@@ -548,15 +548,19 @@
                 case 'ArrowLeft':
                 case 'ArrowUp':
                 case 'PageUp':
-                    ensureWraparound(-200);
+                    velocity -= 5;
                     break;
                 case 'ArrowRight':
                 case 'ArrowDown':
                 case 'PageDown':
-                    ensureWraparound(200);
+                    velocity += 5;
                     break;
             }
-            wrapScroll();
+
+            if (!momentumID) {
+                momentumID = requestAnimationFrame(momentumScroll);
+            }
+
             updateDebug();
         });
 
