@@ -296,14 +296,17 @@
             document.body.appendChild(debugBox);
         }
 
-        function updateDebug() {
+        const updateDebug = () => {
             if (debugBox) {
                 debugBox.innerText = `g_off: ${galleryContainer.scrollLeft}\nvelocity: ${velocity}`;
             }
-        }
+        };
 
         const galleryContainer = document.getElementById('gallery-container');
         const scrollHint = document.getElementById('scroll-hint');
+        const aboutLink = document.getElementById('about-link');
+        const aboutOverlay = document.getElementById('about-overlay');
+        const aboutClose = document.getElementById('about-close');
 
         let isDragging = false;
         let startX = 0;
@@ -328,16 +331,18 @@
         /**
          * Duplicate gallery items to achieve wrap-around scrolling.
          */
-        function duplicateContent() {
+        const duplicateContent = () => {
             const items = Array.from(galleryContainer.children);
-            items.forEach(item => galleryContainer.appendChild(item.cloneNode(true)));
-        }
+            items.forEach(item => {
+                galleryContainer.appendChild(item.cloneNode(true));
+            });
+        };
 
         /**
          * Generate an offset sequence like [0, 1, -1, 2, -2, 3, -3, ...]
          * stopping when we've listed all offsets for the original n images.
          */
-        function generateOffsets(n) {
+        const generateOffsets = n => {
             const offsets = [];
             let i = 0;
             while (i < n) {
@@ -352,7 +357,7 @@
                 i++;
             }
             return offsets;
-        }
+        };
 
         /**
          * Build loadPairs as pairs of [originalIndex, duplicateIndex] in the order:
@@ -363,7 +368,7 @@
          *   (n-2) & (n-2)+n,
          *   etc.
          */
-        function buildLoadPairs() {
+        const buildLoadPairs = () => {
             loadPairs = [];
             loadPairsIndex = 0;
 
@@ -379,13 +384,13 @@
                 const duplicateIndex = realIndex < n ? realIndex + n : realIndex - n;
                 loadPairs.push([realIndex, duplicateIndex]);
             }
-        }
+        };
 
         /**
          * Load the next pair of images (one original + its duplicate) in parallel,
          * then move on to the next pair when both complete or error out.
          */
-        function loadNextPair() {
+        const loadNextPair = () => {
             if (loadPairsIndex >= loadPairs.length) {
                 return;
             }
@@ -411,29 +416,31 @@
                 }
 
                 const img = new Image();
-                img.src = imagePath;
 
-                img.onload = () => {
+                // Attach event listeners before assigning src
+                img.addEventListener('load', () => {
                     image.src = imagePath;
                     requestAnimationFrame(() => {
                         image.style.opacity = 1;
                     });
                     handleSingleImageComplete();
-                };
-                img.onerror = handleSingleImageComplete;
-            }
-        }
+                });
 
-        function wrapScroll() {
+                img.addEventListener('error', handleSingleImageComplete);
+                img.src = imagePath;
+            }
+        };
+
+        const wrapScroll = () => {
             const totalWidth = galleryContainer.scrollWidth / 2;
             if (galleryContainer.scrollLeft >= totalWidth) {
                 galleryContainer.scrollLeft -= totalWidth;
             } else if (galleryContainer.scrollLeft <= 0) {
                 galleryContainer.scrollLeft += totalWidth;
             }
-        }
+        };
 
-        function ensureWraparound(scrollAmount) {
+        const ensureWraparound = scrollAmount => {
             const totalWidth = galleryContainer.scrollWidth / 2;
             let targetScrollLeft = galleryContainer.scrollLeft + scrollAmount;
 
@@ -444,12 +451,12 @@
                 const overflow = targetScrollLeft - totalWidth;
                 targetScrollLeft = overflow;
             }
-
             galleryContainer.scrollLeft = targetScrollLeft;
-        }
+        };
 
+        let storedAnimation;
 
-        function stopScrollHint() {
+        const stopScrollHint = () => {
             if (fadedOut) return;
             fadedOut = true;
 
@@ -464,18 +471,18 @@
             };
             scrollHint.addEventListener('animationiteration', stopAnimation);
             scrollHint.addEventListener('webkitAnimationIteration', stopAnimation);
-        }
+        };
 
-        function startScrollHint() {
+        const startScrollHint = () => {
             fadedOut = false;
             scrollHint.style.opacity = '1';
             scrollHint.style.visibility = 'visible';
             if (storedAnimation !== 'none') {
                 scrollHint.style.animation = storedAnimation;
             }
-        }
+        };
 
-        function loadBiggerImagesIfNeeded() {
+        const loadBiggerImagesIfNeeded = () => {
             const screenHeightMinusNavbar = window.innerHeight - 50;
             let newChosenHeight = 0;
 
@@ -490,18 +497,15 @@
                 newChosenHeight = availableHeights[availableHeights.length - 1];
             }
 
-            // Only load larger images if a bigger height is found than before
             if (newChosenHeight > currentChosenHeight) {
                 currentChosenHeight = newChosenHeight;
-
-                // Re-init everything
-                images = Array.from(document.querySelectorAll('.gallery-image'));
+                images = [...document.querySelectorAll('.gallery-image')];
                 buildLoadPairs();
                 loadNextPair();
             }
-        }
+        };
 
-        function setScrollHintDirection() {
+        const setScrollHintDirection = () => {
             const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
             if (isTouchDevice) {
                 scrollHint.innerHTML = '&#x2192;';
@@ -510,15 +514,15 @@
                 scrollHint.innerHTML = '&#x2193;';
                 scrollHint.style.animation = 'arrowDownwards 1.5s infinite';
             }
-        }
+        };
 
-        function startMomentumScroll() {
+        const startMomentumScroll = () => {
             if (!momentumID) {
                 momentumID = requestAnimationFrame(momentumScroll);
             }
-        }
+        };
 
-        function momentumScroll() {
+        const momentumScroll = () => {
             if (Math.abs(velocity) < 0.01) {
                 velocity = 0;
                 momentumID = null;
@@ -529,12 +533,12 @@
             updateDebug();
             velocity *= 0.95;
             momentumID = requestAnimationFrame(momentumScroll);
-        }
+        };
 
-        function handleVelocityChange(change) {
+        const handleVelocityChange = change => {
             velocity += change;
             startMomentumScroll();
-        }
+        };
 
         galleryContainer.addEventListener('wheel', e => {
             e.preventDefault();
@@ -604,15 +608,13 @@
             lastTime = currentTime;
         });
 
-        galleryContainer.addEventListener('touchend', () => {
+        const endTouch = () => {
             isDragging = false;
             startMomentumScroll();
-        });
+        };
 
-        galleryContainer.addEventListener('touchcancel', () => {
-            isDragging = false;
-            startMomentumScroll();
-        });
+        galleryContainer.addEventListener('touchend', endTouch);
+        galleryContainer.addEventListener('touchcancel', endTouch);
 
         document.addEventListener('DOMContentLoaded', () => {
             duplicateContent();
@@ -621,10 +623,6 @@
         });
 
         window.addEventListener('resize', loadBiggerImagesIfNeeded);
-
-        const aboutLink = document.getElementById('about-link');
-        const aboutOverlay = document.getElementById('about-overlay');
-        const aboutClose = document.getElementById('about-close');
 
         aboutLink.addEventListener('click', () => {
             aboutOverlay.classList.add('active');
