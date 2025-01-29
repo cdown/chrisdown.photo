@@ -298,7 +298,7 @@
 
         function updateDebug() {
             if (debugBox) {
-                debugBox.innerText = 'g_off: ' + galleryContainer.scrollLeft + '\nvelocity: ' + velocity;
+                debugBox.innerText = `g_off: ${galleryContainer.scrollLeft}\nvelocity: ${velocity}`;
             }
         }
 
@@ -420,9 +420,7 @@
                     });
                     handleSingleImageComplete();
                 };
-                img.onerror = () => {
-                    handleSingleImageComplete();
-                };
+                img.onerror = handleSingleImageComplete;
             }
         }
 
@@ -450,7 +448,6 @@
             galleryContainer.scrollLeft = targetScrollLeft;
         }
 
-        let storedAnimation = 'none';
 
         function stopScrollHint() {
             if (fadedOut) return;
@@ -515,6 +512,12 @@
             }
         }
 
+        function startMomentumScroll() {
+            if (!momentumID) {
+                momentumID = requestAnimationFrame(momentumScroll);
+            }
+        }
+
         function momentumScroll() {
             if (Math.abs(velocity) < 0.01) {
                 velocity = 0;
@@ -528,41 +531,34 @@
             momentumID = requestAnimationFrame(momentumScroll);
         }
 
+        function handleVelocityChange(change) {
+            velocity += change;
+            startMomentumScroll();
+        }
+
         galleryContainer.addEventListener('wheel', e => {
             e.preventDefault();
             stopScrollHint();
-            const scrollAmount = e.deltaY !== 0 ? e.deltaY : e.deltaX;
-            velocity -= scrollAmount * 0.01;
-            if (!momentumID) {
-                momentumID = requestAnimationFrame(momentumScroll);
-            }
-            updateDebug();
+            handleVelocityChange(-e.deltaY * 0.01);
         });
 
         document.addEventListener('keydown', e => {
-            if (aboutOverlay.classList.contains('active')) {
-                // Prevent gallery scrolling if about is open
-                return;
-            }
+            if (aboutOverlay.classList.contains('active')) return;
+
             stopScrollHint();
+
             switch (e.key) {
                 case 'ArrowLeft':
                 case 'ArrowUp':
                 case 'PageUp':
-                    velocity -= 5;
+                    handleVelocityChange(5);
                     break;
                 case 'ArrowRight':
                 case 'ArrowDown':
                 case 'PageDown':
-                    velocity += 5;
+                    handleVelocityChange(-5);
                     break;
             }
-
-            if (!momentumID) {
-                momentumID = requestAnimationFrame(momentumScroll);
-            }
-
-            updateDebug();
         });
 
         galleryContainer.addEventListener('scroll', () => {
@@ -572,20 +568,12 @@
         });
 
         scrollHint.addEventListener('click', () => {
-            velocity -= 5;
-
-            if (!momentumID) {
-                momentumID = requestAnimationFrame(momentumScroll);
-            }
-
-            updateDebug();
+            handleVelocityChange(-5);
         });
 
         galleryContainer.addEventListener('touchstart', e => {
-            if (aboutOverlay.classList.contains('active')) {
-                // Prevent gallery scrolling if about is open
-                return;
-            }
+            if (aboutOverlay.classList.contains('active')) return;
+
             if (momentumID) {
                 cancelAnimationFrame(momentumID);
                 momentumID = null;
@@ -597,15 +585,10 @@
             lastTime = Date.now();
             velocity = 0;
             stopScrollHint();
-            updateDebug();
         });
 
         galleryContainer.addEventListener('touchmove', e => {
-            if (aboutOverlay.classList.contains('active')) {
-                // Prevent gallery scrolling if about is open
-                return;
-            }
-            if (!isDragging) return;
+            if (aboutOverlay.classList.contains('active') || !isDragging) return;
             e.preventDefault();
 
             const x = e.touches[0].pageX - galleryContainer.offsetLeft;
@@ -613,38 +596,31 @@
             const currentTime = Date.now();
             const dt = currentTime - lastTime;
 
-            // net drag from initial position
-            const scrollDelta = scrollLeft + (startX - x) - galleryContainer.scrollLeft;
-            ensureWraparound(scrollDelta);
+            ensureWraparound(scrollLeft + (startX - x) - galleryContainer.scrollLeft);
             wrapScroll();
 
-            // Also do velocity for momentum
             velocity = dx / dt;
             lastX = x;
             lastTime = currentTime;
-            updateDebug();
         });
 
         galleryContainer.addEventListener('touchend', () => {
             isDragging = false;
-            momentumID = requestAnimationFrame(momentumScroll);
+            startMomentumScroll();
         });
 
         galleryContainer.addEventListener('touchcancel', () => {
             isDragging = false;
-            momentumID = requestAnimationFrame(momentumScroll);
+            startMomentumScroll();
         });
 
-        // On load and on resize
         document.addEventListener('DOMContentLoaded', () => {
             duplicateContent();
             loadBiggerImagesIfNeeded();
             setScrollHintDirection();
         });
 
-        window.addEventListener('resize', () => {
-            loadBiggerImagesIfNeeded();
-        });
+        window.addEventListener('resize', loadBiggerImagesIfNeeded);
 
         const aboutLink = document.getElementById('about-link');
         const aboutOverlay = document.getElementById('about-overlay');
@@ -661,7 +637,7 @@
             document.body.style.overflow = '';
         });
 
-        window.addEventListener('click', (event) => {
+        window.addEventListener('click', event => {
             if (event.target === aboutOverlay) {
                 aboutOverlay.classList.remove('active');
                 document.body.style.overflow = '';
