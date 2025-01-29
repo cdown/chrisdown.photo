@@ -359,18 +359,13 @@
          * stopping when we've listed all offsets for the original n images.
          */
         const generateOffsets = n => {
-            const offsets = [];
-            let i = 0;
-            while (i < n) {
-                if (i === 0) {
-                    offsets.push(0);
-                } else {
+            if (n === 0) return [];
+            let offsets = [0];
+            for (let i = 1; offsets.length < n; i++) {
+                offsets.push(-i);
+                if (offsets.length < n) {
                     offsets.push(i);
-                    if (i <= n - 1) {
-                        offsets.push(-i);
-                    }
                 }
-                i++;
             }
             return offsets;
         };
