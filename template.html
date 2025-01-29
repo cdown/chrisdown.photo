@@ -323,11 +323,10 @@
         let startX = 0;
         let scrollLeft = 0;
 
-        // Variables for momentum
         let lastX = 0;
         let lastTime = 0;
         let velocity = 0;
-        let momentumID = null; // requestAnimationFrame ID
+        let momentumID = null;
 
         let fadedOut = false;
         let currentChosenHeight = 0;
@@ -341,6 +340,8 @@
         let scrollRatio = 0.5;
         let scrollingTimeout;
         let isResizing = false;
+
+        let finishedInitialScroll = false;
 
         const availableHeights = [1040, 1400, 1760, 2120];
 
@@ -466,7 +467,7 @@
         let storedAnimation;
 
         const stopScrollHint = () => {
-            if (fadedOut) return;
+            if (!finishedInitialScroll || fadedOut) return;
             fadedOut = true;
 
             storedAnimation = scrollHint.style.animation;
@@ -579,8 +580,6 @@
         document.addEventListener('keydown', e => {
             if (aboutIsOpen()) return;
 
-            stopScrollHint();
-
             switch (e.key) {
                 case 'ArrowLeft':
                 case 'ArrowUp':
@@ -625,7 +624,6 @@
             lastX = startX;
             lastTime = Date.now();
             velocity = 0;
-            stopScrollHint();
         });
 
         galleryContainer.addEventListener('touchmove', e => {
@@ -663,6 +661,12 @@
             // reason, start in the middle.
             galleryContainer.scrollLeft = galleryContainer.scrollWidth / 2;
             saveScrollPosition();
+
+            const onFirstScroll = () => {
+                finishedInitialScroll = true;
+                galleryContainer.removeEventListener('scroll', onFirstScroll);
+            };
+            galleryContainer.addEventListener('scroll', onFirstScroll, { once: true });
         });
 
         window.addEventListener('resize', loadBiggerImagesIfNeeded);
