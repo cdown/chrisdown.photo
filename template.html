@@ -103,6 +103,10 @@
             display: none;
         }
 
+        .gallery-container.no-scroll {
+            pointer-events: none;
+        }
+
         .gallery-item {
           display: inline-block;
           height: 100%;
@@ -644,12 +648,14 @@
 
         aboutLink.addEventListener('click', () => {
             aboutOverlay.classList.add('active');
+          galleryContainer.classList.add('no-scroll');
             document.body.style.overflow = 'hidden';
             stopScrollHint();
         });
 
         aboutClose.addEventListener('click', () => {
             aboutOverlay.classList.remove('active');
+            galleryContainer.classList.remove('no-scroll');
             document.body.style.overflow = '';
         });
 
