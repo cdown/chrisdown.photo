@@ -534,17 +534,24 @@
         };
 
         const momentumScroll = () => {
-            if (Math.abs(velocity) < 0.001) {
+            if (Math.abs(velocity) < 0.0005) {
                 velocity = 0;
                 momentumID = null;
                 return;
             }
-            ensureWraparound(-velocity * 16);
+            ensureWraparound(-velocity * 40);
             wrapScroll();
             updateDebug();
 
-            velocity *= 0.92;
-            velocity = Math.sign(velocity) * Math.max(0, Math.abs(velocity) - 0.002);
+
+            velocity *= 0.94;
+
+            // This introduces a linear deceleration component, ensuring that
+            // the motion stops cleanly. It prevents velocity from lingering
+            // indefinitely when the above multiplier alone would make it
+            // approach zero too slowly. We clamp at zero just to avoid
+            // issues from rounding errors.
+            velocity = Math.sign(velocity) * Math.max(0, Math.abs(velocity) - 0.001);
 
             momentumID = requestAnimationFrame(momentumScroll);
         };
@@ -574,12 +581,12 @@
                 case 'ArrowLeft':
                 case 'ArrowUp':
                 case 'PageUp':
-                    handleVelocityChange(5);
+                    handleVelocityChange(2.5);
                     break;
                 case 'ArrowRight':
                 case 'ArrowDown':
                 case 'PageDown':
-                    handleVelocityChange(-5);
+                    handleVelocityChange(-2.5);
                     break;
             }
         });
