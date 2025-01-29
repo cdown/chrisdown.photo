@@ -572,10 +572,15 @@
             }
         });
 
+        let lastScrollFire = 0;
         galleryContainer.addEventListener('scroll', () => {
-            stopScrollHint();
-            wrapScroll();
-            updateDebug();
+            const now = performance.now();
+            if (now - lastScrollFire > 50) {
+                wrapScroll();
+                updateDebug();
+                stopScrollHint();
+                lastScrollFire = now;
+            }
         });
 
         scrollHint.addEventListener('click', () => {
