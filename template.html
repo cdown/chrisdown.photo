@@ -540,14 +540,19 @@
             startMomentumScroll();
         };
 
+        const aboutIsOpen = () => {
+            return aboutOverlay.classList.contains('active')
+        };
+
         galleryContainer.addEventListener('wheel', e => {
             e.preventDefault();
             stopScrollHint();
+            if (aboutIsOpen()) return;
             handleVelocityChange(-e.deltaY * 0.01);
         });
 
         document.addEventListener('keydown', e => {
-            if (aboutOverlay.classList.contains('active')) return;
+            if (aboutIsOpen()) return;
 
             stopScrollHint();
 
@@ -576,12 +581,13 @@
         });
 
         galleryContainer.addEventListener('touchstart', e => {
-            if (aboutOverlay.classList.contains('active')) return;
+            if (aboutIsOpen()) return;
 
             if (momentumID) {
                 cancelAnimationFrame(momentumID);
                 momentumID = null;
             }
+
             isDragging = true;
             startX = e.touches[0].pageX - galleryContainer.offsetLeft;
             scrollLeft = galleryContainer.scrollLeft;
@@ -592,8 +598,8 @@
         });
 
         galleryContainer.addEventListener('touchmove', e => {
-            if (aboutOverlay.classList.contains('active') || !isDragging) return;
             e.preventDefault();
+            if (aboutIsOpen() || !isDragging) return;
 
             const x = e.touches[0].pageX - galleryContainer.offsetLeft;
             const dx = x - lastX;
