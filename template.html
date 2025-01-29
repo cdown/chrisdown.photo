@@ -534,7 +534,7 @@
         };
 
         const momentumScroll = () => {
-            if (Math.abs(velocity) < 0.01) {
+            if (Math.abs(velocity) < 0.001) {
                 velocity = 0;
                 momentumID = null;
                 return;
@@ -542,7 +542,10 @@
             ensureWraparound(-velocity * 16);
             wrapScroll();
             updateDebug();
-            velocity *= 0.95;
+
+            velocity *= 0.92;
+            velocity = Math.sign(velocity) * Math.max(0, Math.abs(velocity) - 0.002);
+
             momentumID = requestAnimationFrame(momentumScroll);
         };
 
