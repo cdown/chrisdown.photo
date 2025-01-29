@@ -572,7 +572,12 @@
         });
 
         scrollHint.addEventListener('click', () => {
-            galleryContainer.scrollBy({ left: 200, behavior: 'smooth' });
+            velocity -= 5;
+
+            if (!momentumID) {
+                momentumID = requestAnimationFrame(momentumScroll);
+            }
+
             updateDebug();
         });
 
