@@ -427,6 +427,7 @@
                     images[idx].src = imagePath;
                     images[idx].style.opacity = 1;
                 }
+                console.debug("Loaded image", image.alt);
                 loadPairsIndex += 1;
                 loadNextPair();
             });
@@ -445,8 +446,10 @@
             const unduplicatedWidth = galleryContainer.scrollWidth / 2;
 
             if (galleryContainer.scrollLeft >= right) {
+                console.debug("Wrapped around (right to left)");
                 galleryContainer.scrollLeft -= unduplicatedWidth;
             } else if (galleryContainer.scrollLeft <= left) {
+                console.debug("Wrapped around (left to right)");
                 galleryContainer.scrollLeft += unduplicatedWidth;
             }
         };
@@ -508,11 +511,16 @@
                 newChosenHeight = availableHeights[availableHeights.length - 1];
             }
 
+            console.debug("Considering image size change: Current:", currentChosenHeight, "Required:", newChosenHeight);
+
             if (newChosenHeight > currentChosenHeight) {
+                console.debug("Updating image size: Current:", currentChosenHeight, "New:", newChosenHeight, "Required:", newChosenHeight);
                 currentChosenHeight = newChosenHeight;
                 images = [...document.querySelectorAll('.gallery-image')];
                 buildLoadPairs();
                 loadNextPair();
+            } else {
+                console.debug("No change needed: Current:", currentChosenHeight, "Required:", newChosenHeight);
             }
         };
 
@@ -535,6 +543,7 @@
 
         const momentumScroll = () => {
             if (Math.abs(velocity) < 0.0005) {
+                console.debug("Scrolling stopped (momentum)");
                 velocity = 0;
                 momentumID = null;
                 return;
@@ -668,6 +677,7 @@
             restoreScrollPosition();
             clearTimeout(scrollingTimeout);
             scrollingTimeout = setTimeout(() => {
+                console.debug("Resize finished");
                 isResizing = false; // Resizing finished, allow scroll saves.
             }, 200);
         });
@@ -682,10 +692,12 @@
                 } else {
                     scrollRatio = 0;
                 }
+                console.debug("Saving scroll ratio", scrollRatio);
             }, 100);
         };
 
         const restoreScrollPosition = () => {
+            console.debug("Restoring scroll ratio", scrollRatio);
             const totalScrollableWidth = galleryContainer.scrollWidth - galleryContainer.clientWidth;
             galleryContainer.scrollLeft = scrollRatio * totalScrollableWidth;
         };
