@@ -431,7 +431,10 @@
 
         const wrapScroll = () => {
             const totalWidth = galleryContainer.scrollWidth / 2;
-            if (galleryContainer.scrollLeft >= totalWidth) {
+
+            // + 1 to avoid fighting with initial scroll position from
+            // DOMContentLoaded
+            if (galleryContainer.scrollLeft >= totalWidth + 1) {
                 galleryContainer.scrollLeft -= totalWidth;
             } else if (galleryContainer.scrollLeft <= 0) {
                 galleryContainer.scrollLeft += totalWidth;
@@ -624,6 +627,11 @@
             duplicateContent();
             loadBiggerImagesIfNeeded();
             setScrollHintDirection();
+
+            // We log events based on scroll events. If we are at position 0
+            // initially, trying to scroll left won't trigger anything. For that
+            // reason, start in the middle.
+            galleryContainer.scrollLeft = galleryContainer.scrollWidth / 2;
         });
 
         window.addEventListener('resize', loadBiggerImagesIfNeeded);
