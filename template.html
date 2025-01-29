@@ -337,6 +337,11 @@
         let loadPairs = [];
         let loadPairsIndex = 0;
 
+        // For restoring the scroll position when viewport size changes
+        let scrollRatio = 0.5;
+        let scrollingTimeout;
+        let isResizing = false;
+
         const availableHeights = [1040, 1400, 1760, 2120];
 
         /**
@@ -583,6 +588,7 @@
                 wrapScroll();
                 updateDebug();
                 stopScrollHint();
+                saveScrollPosition();
                 lastScrollFire = now;
             }
         });
@@ -642,9 +648,37 @@
             // initially, trying to scroll left won't trigger anything. For that
             // reason, start in the middle.
             galleryContainer.scrollLeft = galleryContainer.scrollWidth / 2;
+            saveScrollPosition();
         });
 
         window.addEventListener('resize', loadBiggerImagesIfNeeded);
+
+        window.addEventListener('resize', () => {
+            isResizing = true;
+            restoreScrollPosition();
+            clearTimeout(scrollingTimeout);
+            scrollingTimeout = setTimeout(() => {
+                isResizing = false; // Resizing finished, allow scroll saves.
+            }, 200);
+        });
+
+        const saveScrollPosition = () => {
+            if (isResizing) return;
+            clearTimeout(scrollingTimeout);
+            scrollingTimeout = setTimeout(() => {
+                const totalScrollableWidth = galleryContainer.scrollWidth - galleryContainer.clientWidth;
+                if (totalScrollableWidth > 0) {
+                    scrollRatio = galleryContainer.scrollLeft / totalScrollableWidth;
+                } else {
+                    scrollRatio = 0;
+                }
+            }, 100);
+        };
+
+        const restoreScrollPosition = () => {
+            const totalScrollableWidth = galleryContainer.scrollWidth - galleryContainer.clientWidth;
+            galleryContainer.scrollLeft = scrollRatio * totalScrollableWidth;
+        };
 
         aboutLink.addEventListener('click', () => {
             aboutOverlay.classList.add('active');
