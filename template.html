@@ -401,40 +401,32 @@
                 return;
             }
             const pair = loadPairs[loadPairsIndex];
-            let completedCount = 0;
+            const primaryIdx = pair[0]; // Choose one image to check
+            const image = images[primaryIdx];
+            const imagePath = image.getAttribute(`data-${currentChosenHeight}`);
 
-            // Callback to be called when one image finishes or errors
-            const handleSingleImageComplete = () => {
-                completedCount++;
-                if (completedCount === 2) {
-                    loadPairsIndex += 1;
-                    loadNextPair();
-                }
-            };
-
-            // Load both images in the pair
-            for (const idx of pair) {
-                const image = images[idx];
-                const imagePath = image.getAttribute(`data-${currentChosenHeight}`);
-                if (!imagePath) {
-                    handleSingleImageComplete();
-                    continue;
-                }
-
-                const img = new Image();
-
-                // Attach event listeners before assigning src
-                img.addEventListener('load', () => {
-                    image.src = imagePath;
-                    requestAnimationFrame(() => {
-                        image.style.opacity = 1;
-                    });
-                    handleSingleImageComplete();
-                });
-
-                img.addEventListener('error', handleSingleImageComplete);
-                img.src = imagePath;
+            if (!imagePath) {
+                loadPairsIndex += 1;
+                loadNextPair();
+                return;
             }
+
+            const img = new Image();
+            img.addEventListener('load', () => {
+                for (const idx of pair) {
+                    images[idx].src = imagePath;
+                    images[idx].style.opacity = 1;
+                }
+                loadPairsIndex += 1;
+                loadNextPair();
+            });
+
+            img.addEventListener('error', () => {
+                loadPairsIndex += 1;
+                loadNextPair();
+            });
+
+            img.src = imagePath;
         };
 
         const wrapScroll = () => {
