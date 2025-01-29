@@ -431,14 +431,14 @@
         };
 
         const wrapScroll = () => {
-            const totalWidth = galleryContainer.scrollWidth / 2;
+            const left = galleryContainer.scrollWidth / 4;
+            const right = (galleryContainer.scrollWidth / 4) * 3;
+            const unduplicatedWidth = galleryContainer.scrollWidth / 2;
 
-            // + 1 to avoid fighting with initial scroll position from
-            // DOMContentLoaded
-            if (galleryContainer.scrollLeft >= totalWidth + 1) {
-                galleryContainer.scrollLeft -= totalWidth;
-            } else if (galleryContainer.scrollLeft <= 0) {
-                galleryContainer.scrollLeft += totalWidth;
+            if (galleryContainer.scrollLeft >= right) {
+                galleryContainer.scrollLeft -= unduplicatedWidth;
+            } else if (galleryContainer.scrollLeft <= left) {
+                galleryContainer.scrollLeft += unduplicatedWidth;
             }
         };
 
