@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import os
 import re
 import json
@@ -8,73 +9,64 @@ import subprocess
 from selectolax.parser import HTMLParser
 from collections import namedtuple
 
-FlickrImageData = namedtuple("FlickrImageData", ["title", "sizes", "width", "height"])
 CACHE_FILE = "image_titles_cache.json"
 IMG_DIR = "images"
+IMG_WIDTHS = [800, 1400, 2000, 3000]
 
-# Minus the navbar height (40) for common resolutions
-NAVBAR_HEIGHT = 40
-IMG_HEIGHTS = [1080, 1440, 1800, 2160]
-IMG_HEIGHTS = [x - NAVBAR_HEIGHT for x in IMG_HEIGHTS]
+FlickrImageData = namedtuple("FlickrImageData", ["title"])
 
-def load_cache():
+
+def _load_cache():
     if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE) as file:
-            return json.load(file)
+        with open(CACHE_FILE) as fh:
+            return json.load(fh)
     return {}
 
 
-def save_cache(cache):
-    with open(CACHE_FILE, "w") as file:
-        json.dump(cache, file, indent=4)
+def _save_cache(cache):
+    with open(CACHE_FILE, "w") as fh:
+        json.dump(cache, fh, indent=2)
 
 
-def extract_photo_id(url):
-    match = re.search(r"/photos/[^/]+/([^/]+)/?", url)
-    if not match:
-        raise ValueError(f"Invalid Flickr URL: {url}")
-    return match.group(1)
+def _photo_id(url):
+    m = re.search(r"/photos/[^/]+/(\d+)", url)
+    if not m:
+        raise ValueError(f"Bad Flickr URL: {url}")
+    return m.group(1)
 
 
-def fetch_image_data(flickr_url):
-    print(f"Fetching image data from {flickr_url}")
-    response = requests.get(f"{flickr_url}/sizes/o/")
-    html = HTMLParser(response.text)
-    title = html.css_first('meta[name="title"]').attributes["content"]
-    image_url = html.css_first(
-        'div#allsizes-photo > img[src*="live.staticflickr.com"]'
+def _fetch_image_page(url):
+    r = requests.get(f"{url}/sizes/o/")
+    r.raise_for_status()
+    doc = HTMLParser(r.text)
+    title = doc.css_first('meta[name="title"]').attributes["content"]
+    img = doc.css_first(
+        'div#allsizes-photo img[src*="live.staticflickr.com"]'
     ).attributes["src"]
-    return title, image_url
+    return title, img
 
 
-def download_image(image_url, temp_path):
-    print(f"Downloading image from {image_url}")
-    response = requests.get(image_url)
-    with open(temp_path, "wb") as file:
-        file.write(response.content)
+def _download(url, dest):
+    r = requests.get(url)
+    r.raise_for_status()
+    with open(dest, "wb") as fh:
+        fh.write(r.content)
 
 
-def get_local_image_dimensions(image_path):
-    try:
-        result = subprocess.run(
-            ["identify", "-format", "%w %h", image_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True
-        )
-        width_str, height_str = result.stdout.strip().split()
-        width, height = int(width_str), int(height_str)
-        if width <= 0 or height <= 0:
-            raise ValueError(f"Invalid dimensions for {image_path}")
-        return width, height
-    except Exception as e:
-        raise ValueError(f"Could not determine image dimensions from {image_path}") from e
+def _dimensions(path):
+    res = subprocess.run(
+        ["identify", "-format", "%w %h", path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True,
+    )
+    w, h = map(int, res.stdout.strip().split())
+    return w, h
 
 
-def process_image_for_height(temp_path, output_path, height, danger_of_banding):
+def _resize(src, dest, width, danger_of_banding=False):
     quality = "95" if danger_of_banding else "85"
-
     # If there's a danger of banding we do two things to try to mitigate it,
     # since we can't use 16-bit AVIF due to 8-bit rendering pipeline in
     # browsers:
@@ -84,9 +76,10 @@ def process_image_for_height(temp_path, output_path, height, danger_of_banding):
     noise_args = (
         ["-attenuate", "0.04", "+noise", "Gaussian"] if danger_of_banding else []
     )
-    resize_cmd = [
+
+    cmd = [
         "magick",
-        temp_path,
+        src,
         "-auto-orient",
         "-strip",
         "-colorspace",
@@ -94,119 +87,126 @@ def process_image_for_height(temp_path, output_path, height, danger_of_banding):
         "-quality",
         quality,
         "-resize",
-        f"x{height}",
-        "-unsharp",
-        "0x0.5+0.5+0.008",
-        *noise_args,
-        output_path,
+        str(width),
     ]
-    subprocess.run(resize_cmd, check=True)
+
+    if noise_args:
+        cmd.extend(noise_args)
+
+    cmd.append(dest)
+
+    subprocess.run(cmd, check=True)
 
 
-def get_flickr_image(flickr_url, danger_of_banding=False):
-    photo_id = extract_photo_id(flickr_url)
-    cache = load_cache()
-    image_info = cache.get(photo_id, {})
-    image_title = image_info.get("title")
-    image_width = image_info.get("width")
-    image_height = image_info.get("height")
+def get_flickr_image(url, danger_of_banding=False):
+    pid = _photo_id(url)
+    cache = _load_cache()
+    meta = cache.get(pid, {})
 
-    sizes = {}
-    missing_sizes = []
-    for h in IMG_HEIGHTS:
-        path_for_height = f"{IMG_DIR}/{photo_id}_{h}.avif"
-        sizes[str(h)] = path_for_height
-        if not os.path.exists(path_for_height):
-            missing_sizes.append(h)
+    sizes = {str(w): f"{IMG_DIR}/{pid}_{w}.avif" for w in IMG_WIDTHS}
+    missing = [w for w in IMG_WIDTHS if not os.path.exists(sizes[str(w)])]
 
-    # We need to download if missing sizes OR we don't have dimension/title yet
-    if missing_sizes or image_title is None or image_width is None or image_height is None:
-        fetched_title, image_url = fetch_image_data(flickr_url)
-
-        # Download the original image so we can find out its dimensions
+    if missing or not {"title", "width", "height"} <= meta.keys():
+        title, big = _fetch_image_page(url)
         os.makedirs(IMG_DIR, exist_ok=True)
-        temp_path = f"{IMG_DIR}/{photo_id}_temp.jpg"
-        download_image(image_url, temp_path)
-        width, height = get_local_image_dimensions(temp_path)
+        tmp = f"{IMG_DIR}/{pid}_src.jpg"
+        _download(big, tmp)
+        w, h = _dimensions(tmp)
+        meta.update({"title": title, "width": w, "height": h})
+        cache[pid] = meta
+        _save_cache(cache)
+        for w_out in missing:
+            _resize(tmp, sizes[str(w_out)], w_out, danger_of_banding)
+        os.remove(tmp)
 
-        # Update in-memory cache
-        image_info["title"] = fetched_title
-        image_info["width"] = width
-        image_info["height"] = height
-        cache[photo_id] = image_info
-        save_cache(cache)
-
-        # For newly missing sizes, do the conversion
-        for h_val in missing_sizes:
-            avif_path = f"{IMG_DIR}/{photo_id}_{h_val}.avif"
-            process_image_for_height(temp_path, avif_path, h_val, danger_of_banding)
-
-        os.remove(temp_path)
-    else:
-        # Use cached values
-        fetched_title = image_info["title"]
-        width = image_info["width"]
-        height = image_info["height"]
-
-    print(f"Completed processing for {flickr_url}")
     return FlickrImageData(
-        title=fetched_title,
-        sizes=sizes,
-        width=width,
-        height=height
+        title=meta["title"],
     )
 
 
-def generate_gallery_html(content):
-    html = ""
-    for index, item in enumerate(content["items"]):
-        if "flickr" in item:
-            print(f"Processing gallery item: {item['flickr']}")
-            image_data = get_flickr_image(
-                item["flickr"], item.get("danger_of_banding", False)
-            )
-            data_attrs = []
-            for h in IMG_HEIGHTS:
-                data_attrs.append(f'data-{h}="{image_data.sizes[str(h)]}"')
-            data_attrs_str = " ".join(data_attrs)
-            aspect_ratio = f"{image_data.width}/{image_data.height}"
+def _generate_image_data(item):
+    """Generate structured data for a single image"""
+    danger_of_banding = item.get("danger_of_banding", False)
+    data = get_flickr_image(item["flickr"], danger_of_banding)
+    pid = _photo_id(item["flickr"])
 
-            html += (
-                f'<div class="gallery-item" data-index="{index}">'
-                f'<img src="" style="aspect-ratio: {aspect_ratio};" {data_attrs_str} alt="{image_data.title}" class="gallery-image">'
-                f"</div>"
-            )
-        if "text" in item:
-            text_html = "</p><p class='gallery-text'>".join(item["text"])
-            html += f'<div class="gallery-item"><p class="gallery-text">{text_html}</p></div>'
-    return html
+    return {
+        "id": pid,
+        "title": data.title,
+        "sizes": IMG_WIDTHS,
+    }
 
 
-def generate_about(content):
-    html = f"""
-    <div class="about-content">
-        <img class="about-image" src="{content["about"]["image"]}">
-        <div class="about-text">
-            {''.join(f"<p>{item}</p>" for item in content["about"]["text"])}
-        </div>
-    </div>
-    """
-    return html
+def build_gallery(content):
+    """Generate a JSON data structure for all images"""
+    images = []
 
-def render_html(template_path, content, output_path):
-    with open(template_path) as template, open(output_path, "w") as output:
-        output.write(
-            template.read()
-            .replace("{{ gallery_items }}", generate_gallery_html(content))
-            .replace("{{ about }}", generate_about(content))
-        )
+    for item in content["items"]:
+        image_data = _generate_image_data(item)
+        images.append(image_data)
+
+    js_content = f"""
+<div id="gallery-one-col" class="gallery layout-one-col">
+  <div class="column" id="one-col-container"></div>
+</div>
+
+<div id="gallery-two-col" class="gallery layout-two-col">
+  <div class="column" id="two-col-1"></div>
+  <div class="column" id="two-col-2"></div>
+</div>
+
+<div id="gallery-three-col" class="gallery layout-three-col">
+  <div class="column" id="three-col-1"></div>
+  <div class="column" id="three-col-2"></div>
+  <div class="column" id="three-col-3"></div>
+</div>
+
+<script>
+const GALLERY_IMAGES = {json.dumps(images)};
+
+const LAYOUT_CONFIG = {{
+  one_col: {{
+    images: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["one_col"]])}
+  }},
+  two_col: {{
+    col1: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["two_col"]["col1"]])},
+    col2: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["two_col"]["col2"]])}
+  }},
+  three_col: {{
+    col1: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["three_col"]["col1"]])},
+    col2: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["three_col"]["col2"]])},
+    col3: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["three_col"]["col3"]])}
+  }}
+}};
+</script>
+"""
+    return js_content
+
+
+def build_about(about_block):
+    paras = "".join(f"<p>{p}</p>" for p in about_block["text"])
+    img = about_block["image"]
+    return (
+        '<div class="about-content">'
+        f'<img class="about-image" src="{img}" alt="Chris Down portrait">'
+        f'<div class="about-text">{paras}</div>'
+        "</div>"
+    )
+
+
+def render(template_path, content, output_path):
+    tpl = open(template_path).read()
+    html = tpl.replace("{{ gallery }}", build_gallery(content))
+    html = html.replace("{{ about }}", build_about(content["about"]))
+    with open(output_path, "w") as fh:
+        fh.write(html)
 
 
 def main():
-    with open("content.yaml") as content_file:
-        content = yaml.safe_load(content_file)
-    render_html("template.html", content, "output.html")
-    print("Webpage generation complete. Output saved to output.html.")
+    raw = open("content.yaml").read()
+    content = yaml.safe_load(raw)
+    render("template.html", content, "output.html")
+    print("Generated output.html")
 
 
 if __name__ == "__main__":
