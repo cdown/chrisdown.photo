@@ -164,8 +164,21 @@
     @media (max-width: 1200px) {
       .gallery.layout-one-col { display: flex; }
     }
+    @media (max-width: 1200px) and (min-aspect-ratio: 4/5) and (max-aspect-ratio: 4/2) {
+      .gallery.layout-one-col { display: none; }
+      .gallery.layout-two-col { display: flex; }
+    }
+    @media (max-width: 1200px) and (min-aspect-ratio: 4/2) {
+      .gallery.layout-one-col { display: none; }
+      .gallery.layout-two-col { display: none; }
+      .gallery.layout-three-col { display: flex; }
+    }
     @media (min-width: 1201px) and (max-width: 2500px) {
       .gallery.layout-two-col { display: flex; }
+    }
+    @media (min-width: 1201px) and (max-width: 2500px) and (min-aspect-ratio: 5/2) {
+      .gallery.layout-two-col { display: none; }
+      .gallery.layout-three-col { display: flex; }
     }
     @media (min-width: 2501px) {
       .gallery.layout-three-col { display: flex; }
