@@ -294,59 +294,79 @@
           .find(g => window.getComputedStyle(g).display !== 'none');
         if (!active_gallery) return;
 
-        const columns = active_gallery.querySelectorAll('.column');
+        const imgs = Array.from(active_gallery.querySelectorAll('.column img'));
 
-        Array.from(columns).forEach(column => {
+        const vv = window.visualViewport;
+        const vp_width = vv?.width || window.innerWidth;
+        const vp_height = vv?.height || window.innerHeight;
+        const center_x = vp_width / 2;
+        const center_y = vp_height / 2;
+
+        // Sort images, first by proximity to viewport center
+        imgs.sort((a, b) => {
+          const ra = a.getBoundingClientRect();
+          const xa = ra.left + ra.width / 2;
+          const ya = ra.top + ra.height / 2;
+          const da = Math.hypot(xa - center_x, ya - center_y);
+
+          const rb = b.getBoundingClientRect();
+          const xb = rb.left + rb.width / 2;
+          const yb = rb.top + rb.height / 2;
+          const db = Math.hypot(xb - center_x, yb - center_y);
+
+          return da - db;
+        });
+
+        imgs.forEach(img => {
+          const column = img.closest('.column');
           const css_width = column.getBoundingClientRect().width;
           const zoom_level = window.visualViewport?.scale || window.devicePixelRatio || 1;
           const column_width = css_width * zoom_level;
 
-          column.querySelectorAll('img').forEach(img => {
-            const image_id = img.dataset.imageId;
-            const image_data = GALLERY_IMAGES.find(data => data.id === image_id);
-            if (!image_data) return;
+          const image_id = img.dataset.imageId;
+          const image_data = GALLERY_IMAGES.find(data => data.id === image_id);
+          if (!image_data) return;
 
-            const best_size = select_best_image_size(image_data, column_width);
-            const image_url = get_image_url(image_id, best_size);
+          const best_size = select_best_image_size(image_data, column_width);
+          const image_url = get_image_url(image_id, best_size);
 
-            if (image_cache.has(image_id)) { // We've loaded this image before.
-              const cached_image = image_cache.get(image_id);
+          if (image_cache.has(image_id)) { // We've loaded this image before.
+            const cached_image = image_cache.get(image_id);
 
-              // To avoid showing white, always apply the already loaded version
-              // first even if we will later load a bigger one.
-              if (!img.src) {
-                img.src = cached_image.url;
-                img.classList.add('loaded');
-              }
+            // To avoid showing white, always apply the already loaded version
+            // first even if we will later load a bigger one.
+            if (!img.src) {
+              img.src = cached_image.url;
+              img.classList.add('loaded');
+            }
 
-              if (best_size > cached_image.size) {
-                // We need a bigger size. Load it in the background and then
-                // swap.
-                const temp_img = new Image();
-                temp_img.onload = () => {
-                  // Find all instances of this image in any layout and update
-                  // them and the cache.
-                  document.querySelectorAll(`img[data-image-id="${image_id}"]`).forEach(img_instance => {
-                    img_instance.src = image_url;
-                  });
-                  image_cache.set(image_id, { url: image_url, size: best_size });
-                  max_loaded_width = Math.max(max_loaded_width, best_size);
-                };
-                temp_img.src = image_url;
-              }
-            } else { // We've never loaded this image before.
+            if (best_size > cached_image.size) {
+              // We need a bigger size. Load it in the background and then
+              // swap.
               const temp_img = new Image();
               temp_img.onload = () => {
+                // Find all instances of this image in any layout and update
+                // them and the cache.
                 document.querySelectorAll(`img[data-image-id="${image_id}"]`).forEach(img_instance => {
                   img_instance.src = image_url;
-                  img_instance.classList.add('loaded');
                 });
                 image_cache.set(image_id, { url: image_url, size: best_size });
                 max_loaded_width = Math.max(max_loaded_width, best_size);
               };
               temp_img.src = image_url;
             }
-          });
+          } else { // We've never loaded this image before.
+            const temp_img = new Image();
+            temp_img.onload = () => {
+              document.querySelectorAll(`img[data-image-id="${image_id}"]`).forEach(img_instance => {
+                img_instance.src = image_url;
+                img_instance.classList.add('loaded');
+              });
+              image_cache.set(image_id, { url: image_url, size: best_size });
+              max_loaded_width = Math.max(max_loaded_width, best_size);
+            };
+            temp_img.src = image_url;
+          }
         });
       }
 
