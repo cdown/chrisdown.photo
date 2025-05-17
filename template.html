@@ -297,7 +297,9 @@
         const columns = active_gallery.querySelectorAll('.column');
 
         Array.from(columns).forEach(column => {
-          const column_width = column.getBoundingClientRect().width;
+          const css_width = column.getBoundingClientRect().width;
+          const zoom_level = window.visualViewport?.scale || window.devicePixelRatio || 1;
+          const column_width = css_width * zoom_level;
 
           column.querySelectorAll('img').forEach(img => {
             const image_id = img.dataset.imageId;
@@ -357,6 +359,12 @@
         clearTimeout(resize_debounce);
         resize_debounce = setTimeout(update_gallery_images, 150);
       });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+          clearTimeout(resize_debounce);
+          resize_debounce = setTimeout(update_gallery_images, 150);
+        });
+      }
     })();
   </script>
 
