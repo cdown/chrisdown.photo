@@ -343,7 +343,16 @@
         const columns = Array.from(active_gallery.querySelectorAll('.column'));
         const max_rows = Math.max(...columns.map(col => col.children.length));
 
+        const vv = window.visualViewport;
+        prev_viewport_width  = vv?.width  || window.innerWidth;
+        prev_viewport_height = vv?.height || window.innerHeight;
+        prev_viewport_scale  = vv?.scale  || window.devicePixelRatio || 1;
+
         for (let row_index = 0; row_index < max_rows; row_index++) {
+          if (!is_first_load) {
+            console.log('First load aborted');
+            return;
+          }
           for (let col_index = 0; col_index < columns.length; col_index++) {
             const img_el = columns[col_index].children[row_index];
             if (!img_el) continue;
@@ -358,11 +367,6 @@
             fetch_image(image_id, image_data, best_size, REASON.FIRST_LOAD);
           }
         }
-
-        const vv = window.visualViewport;
-        prev_viewport_width  = vv?.width  || window.innerWidth;
-        prev_viewport_height = vv?.height || window.innerHeight;
-        prev_viewport_scale  = vv?.scale  || window.devicePixelRatio || 1;
       }
 
       // Handle viewport or device-pixel changes after initial load by
@@ -433,11 +437,19 @@
       });
 
       window.addEventListener('resize', () => {
+        if (is_first_load) {
+          console.log('First load interrupted, skipping');
+          is_first_load = false;
+        }
         clearTimeout(debounce);
         debounce = setTimeout(handle_resize, 150);
       });
       if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
+          if (is_first_load) {
+            console.log('First load interrupted, skipping');
+            is_first_load = false;
+          }
           clearTimeout(debounce);
           debounce = setTimeout(handle_resize, 150);
         });
