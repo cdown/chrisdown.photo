@@ -247,6 +247,12 @@
       let debounce;
       let is_first_load = true;
 
+      // Browsers send a resize event on startup, but we want to do a
+      // sequential load at startup, not a viewport oriented one. This makes
+      // sure we ignore ones before we first calculate the viewport size, so
+      // we don't need resize notifications yet.
+      let first_load_started = false;
+
       // Previous viewport dimensions and scale to detect meaningful changes.
       let prev_width, prev_height, prev_scale;
 
@@ -343,6 +349,8 @@
         const columns = Array.from(active_gallery.querySelectorAll('.column'));
         const max_rows = Math.max(...columns.map(col => col.children.length));
 
+        first_load_started = true;
+
         const vv = window.visualViewport;
         prev_viewport_width  = vv?.width  || window.innerWidth;
         prev_viewport_height = vv?.height || window.innerHeight;
@@ -437,6 +445,9 @@
       });
 
       window.addEventListener('resize', () => {
+          if (!first_load_started) {
+            return;
+          }
         if (is_first_load) {
           console.log('First load interrupted, skipping');
           is_first_load = false;
@@ -446,6 +457,9 @@
       });
       if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
+          if (!first_load_started) {
+            return;
+          }
           if (is_first_load) {
             console.log('First load interrupted, skipping');
             is_first_load = false;
