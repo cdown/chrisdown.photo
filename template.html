@@ -233,13 +233,25 @@
       // times.
       const image_cache = new Map();
 
-      let resize_debounce;
+      let debounce;
+      let is_first_load = true;
+      let prev_width, prev_height, prev_scale;
+
+      const REASON = {
+        FIRST_LOAD:    'first_load',
+        PIXEL_SCALING: 'pixel_scaling',
+        VIEWPORT_SIZE: 'viewport_size'
+      };
+      const REASON_MESSAGES = {
+        [REASON.FIRST_LOAD]:    'Loaded sequentially due to page first load',
+        [REASON.PIXEL_SCALING]: 'Loaded due to pixel scaling increase',
+        [REASON.VIEWPORT_SIZE]: 'Loaded due to viewport size increase'
+      };
 
       function create_image_element(image_data) {
         const img = document.createElement('img');
         img.className = 'gallery-image';
         img.alt = image_data.title;
-        img.loading = 'lazy';
         return img;
       }
 
@@ -258,129 +270,150 @@
         return available_sizes.find(size => size >= required_width) || available_sizes[available_sizes.length - 1];
       }
 
-      function initialise_galleries() {
-        setup_column_layout('one-col-container', LAYOUT_CONFIG.one_col.images);
+      function log_load(url, message) {
+        if (is_first_load && message !== REASON_MESSAGES[REASON.FIRST_LOAD]) return;
+        console.log(`${url}: ${message}`);
+      }
 
-        setup_column_layout('two-col-1', LAYOUT_CONFIG.two_col.col1);
-        setup_column_layout('two-col-2', LAYOUT_CONFIG.two_col.col2);
+      function cache_and_display(image_id, url, size, reason_key) {
+        const msg = REASON_MESSAGES[reason_key] || `Loaded due to ${reason_key}`;
+        document.querySelectorAll(`img[data-image-id="${image_id}"]`).forEach(el => {
+          el.src = url;
+          el.classList.add('loaded');
+        });
+        image_cache.set(image_id, { url, size });
+        max_loaded_width = Math.max(max_loaded_width, size);
+        log_load(url, msg);
+        if (is_first_load && image_cache.size === GALLERY_IMAGES.length) {
+          is_first_load = false;
+          console.log('First load done');
+        }
+      }
 
-        setup_column_layout('three-col-1', LAYOUT_CONFIG.three_col.col1);
-        setup_column_layout('three-col-2', LAYOUT_CONFIG.three_col.col2);
-        setup_column_layout('three-col-3', LAYOUT_CONFIG.three_col.col3);
-
-        load_visible_gallery_images();
+      function fetch_image(image_id, image_data, best_size, reason_key) {
+        const url = get_image_url(image_id, best_size);
+        const cached = image_cache.get(image_id);
+        if (cached && best_size <= cached.size) return;
+        const tmp = new Image();
+        tmp.onload = () => cache_and_display(image_id, url, best_size, reason_key);
+        tmp.src = url;
       }
 
       function setup_column_layout(column_id, image_ids) {
-        const column_element = document.getElementById(column_id);
-        if (!column_element) return;
-
-        column_element.innerHTML = '';
-
-        image_ids.forEach(image_id => {
-          const image_data = GALLERY_IMAGES.find(img => img.id === image_id);
-          if (!image_data) return;
-          const img = create_image_element(image_data);
-          img.dataset.imageId = image_id;
-          img.id = `img-${column_id}-${image_id}`;
-          column_element.appendChild(img);
+        const column = document.getElementById(column_id);
+        if (!column) return;
+        column.innerHTML = '';
+        image_ids.forEach(id => {
+          const data = GALLERY_IMAGES.find(img => img.id === id);
+          if (!data) return;
+          const img = create_image_element(data);
+          img.dataset.imageId = id;
+          img.id = `img-${column_id}-${id}`;
+          column.appendChild(img);
         });
       }
 
-      function load_visible_gallery_images() {
+      function sequential_first_load() {
         const active_gallery = Array.from(document.querySelectorAll('.gallery'))
           .find(g => window.getComputedStyle(g).display !== 'none');
         if (!active_gallery) return;
 
-        const imgs = Array.from(active_gallery.querySelectorAll('.column img'));
+        const columns = Array.from(active_gallery.querySelectorAll('.column'));
+        const max_rows = Math.max(...columns.map(col => col.children.length));
+
+        for (let row_index = 0; row_index < max_rows; row_index++) {
+          for (let col_index = 0; col_index < columns.length; col_index++) {
+            const img_el = columns[col_index].children[row_index];
+            if (!img_el) continue;
+
+            const image_id      = img_el.dataset.imageId;
+            const image_data    = GALLERY_IMAGES.find(d => d.id === image_id);
+            const column_width  = columns[col_index].getBoundingClientRect().width;
+            const viewport_scale = window.visualViewport?.scale || window.devicePixelRatio || 1;
+            const required_width = column_width * viewport_scale;
+            const best_size     = select_best_image_size(image_data, required_width);
+
+            fetch_image(image_id, image_data, best_size, REASON.FIRST_LOAD);
+          }
+        }
 
         const vv = window.visualViewport;
-        const vp_width = vv?.width || window.innerWidth;
-        const vp_height = vv?.height || window.innerHeight;
-        const center_x = vp_width / 2;
-        const center_y = vp_height / 2;
-
-        // Sort images, first by proximity to viewport center
-        imgs.sort((a, b) => {
-          const ra = a.getBoundingClientRect();
-          const xa = ra.left + ra.width / 2;
-          const ya = ra.top + ra.height / 2;
-          const da = Math.hypot(xa - center_x, ya - center_y);
-
-          const rb = b.getBoundingClientRect();
-          const xb = rb.left + rb.width / 2;
-          const yb = rb.top + rb.height / 2;
-          const db = Math.hypot(xb - center_x, yb - center_y);
-
-          return da - db;
-        });
-
-        imgs.forEach(img => {
-          const column = img.closest('.column');
-          const css_width = column.getBoundingClientRect().width;
-          const zoom_level = window.visualViewport?.scale || window.devicePixelRatio || 1;
-          const column_width = css_width * zoom_level;
-
-          const image_id = img.dataset.imageId;
-          const image_data = GALLERY_IMAGES.find(data => data.id === image_id);
-          if (!image_data) return;
-
-          const best_size = select_best_image_size(image_data, column_width);
-          const image_url = get_image_url(image_id, best_size);
-
-          if (image_cache.has(image_id)) { // We've loaded this image before.
-            const cached_image = image_cache.get(image_id);
-
-            // To avoid showing white, always apply the already loaded version
-            // first even if we will later load a bigger one.
-            if (!img.src) {
-              img.src = cached_image.url;
-              img.classList.add('loaded');
-            }
-
-            if (best_size > cached_image.size) {
-              // We need a bigger size. Load it in the background and then
-              // swap.
-              const temp_img = new Image();
-              temp_img.onload = () => {
-                // Find all instances of this image in any layout and update
-                // them and the cache.
-                document.querySelectorAll(`img[data-image-id="${image_id}"]`).forEach(img_instance => {
-                  img_instance.src = image_url;
-                });
-                image_cache.set(image_id, { url: image_url, size: best_size });
-                max_loaded_width = Math.max(max_loaded_width, best_size);
-              };
-              temp_img.src = image_url;
-            }
-          } else { // We've never loaded this image before.
-            const temp_img = new Image();
-            temp_img.onload = () => {
-              document.querySelectorAll(`img[data-image-id="${image_id}"]`).forEach(img_instance => {
-                img_instance.src = image_url;
-                img_instance.classList.add('loaded');
-              });
-              image_cache.set(image_id, { url: image_url, size: best_size });
-              max_loaded_width = Math.max(max_loaded_width, best_size);
-            };
-            temp_img.src = image_url;
-          }
-        });
+        prev_viewport_width  = vv?.width  || window.innerWidth;
+        prev_viewport_height = vv?.height || window.innerHeight;
+        prev_viewport_scale  = vv?.scale  || window.devicePixelRatio || 1;
       }
 
-      function update_gallery_images() {
-        load_visible_gallery_images();
+      function handle_resize() {
+        if (is_first_load) return;
+
+        const vv = window.visualViewport;
+        const viewport_width  = vv?.width  || window.innerWidth;
+        const viewport_height = vv?.height || window.innerHeight;
+        const viewport_scale  = vv?.scale  || window.devicePixelRatio || 1;
+
+        let reason_key = REASON.VIEWPORT_SIZE;
+        if (viewport_scale !== prev_viewport_scale) {
+          reason_key = REASON.PIXEL_SCALING;
+        }
+        prev_viewport_width  = viewport_width;
+        prev_viewport_height = viewport_height;
+        prev_viewport_scale  = viewport_scale;
+
+        const active_gallery = Array.from(document.querySelectorAll('.gallery'))
+          .find(g => window.getComputedStyle(g).display !== 'none');
+        if (!active_gallery) return;
+
+        const image_elements = Array.from(active_gallery.querySelectorAll('.column img'));
+        const center_x = viewport_width  / 2;
+        const center_y = viewport_height / 2;
+
+        // Prioritise those closest to the center of the viewport
+        image_elements
+          .sort((img_a, img_b) => {
+            const rect_a = img_a.getBoundingClientRect();
+            const rect_b = img_b.getBoundingClientRect();
+
+            const center_a_x = rect_a.left + rect_a.width  / 2;
+            const center_a_y = rect_a.top  + rect_a.height / 2;
+            const center_b_x = rect_b.left + rect_b.width  / 2;
+            const center_b_y = rect_b.top  + rect_b.height / 2;
+
+            const distance_a = Math.hypot(center_a_x - center_x, center_a_y - center_y);
+            const distance_b = Math.hypot(center_b_x - center_x, center_b_y - center_y);
+
+            return distance_a - distance_b;
+          })
+          .forEach(img_el => {
+            const column        = img_el.closest('.column');
+            const column_width  = column.getBoundingClientRect().width;
+            const required_width = column_width * viewport_scale;
+
+            const image_id   = img_el.dataset.imageId;
+            const image_data = GALLERY_IMAGES.find(d => d.id === image_id);
+            const best_size  = select_best_image_size(image_data, required_width);
+
+            fetch_image(image_id, image_data, best_size, reason_key);
+          });
       }
 
-      window.addEventListener('DOMContentLoaded', initialise_galleries);
+      window.addEventListener('DOMContentLoaded', () => {
+        setup_column_layout('one-col-container',   LAYOUT_CONFIG.one_col.images);
+        setup_column_layout('two-col-1',          LAYOUT_CONFIG.two_col.col1);
+        setup_column_layout('two-col-2',          LAYOUT_CONFIG.two_col.col2);
+        setup_column_layout('three-col-1',        LAYOUT_CONFIG.three_col.col1);
+        setup_column_layout('three-col-2',        LAYOUT_CONFIG.three_col.col2);
+        setup_column_layout('three-col-3',        LAYOUT_CONFIG.three_col.col3);
+        sequential_first_load();
+      });
+
       window.addEventListener('resize', () => {
-        clearTimeout(resize_debounce);
-        resize_debounce = setTimeout(update_gallery_images, 150);
+        clearTimeout(debounce);
+        debounce = setTimeout(handle_resize, 150);
       });
       if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
-          clearTimeout(resize_debounce);
-          resize_debounce = setTimeout(update_gallery_images, 150);
+          clearTimeout(debounce);
+          debounce = setTimeout(handle_resize, 150);
         });
       }
     })();
