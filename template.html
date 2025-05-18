@@ -223,18 +223,31 @@
     about_close.addEventListener('click', hide_about_overlay);
   </script>
   <script>
+  /**
+   * On first load we append all <img> elements at zero size and fetch images
+   * sequentially because their rendered dimensions aren't known until placed
+   * in the DOM.
+   *
+   * After that pass completes, we monitor viewport size and device pixel
+   * scaling. On resize, we sort images by proximity to the viewport centre
+   * and fetch larger variants first, ensuring the most relevant images load
+   * promptly as the user moves through the page.
+   */
     (function() {
-      // Track the largest image width we've loaded across all layouts, so that
-      // we never load a smaller version of an image we already loaded in a
-      // larger size.
+      // Track the largest image width loaded across all layouts to prevent
+      // subsequently loading a smaller variant once a larger image is already
+      // in memory. This preserves visual fidelity and avoids redundant fetches.
       let max_loaded_width = 0;
 
-      // Cache of loaded image data to prevent reloading the same image multiple
-      // times.
+      // Cache of loaded image data keyed by image ID. Prevents duplicate network
+      // requests for the same image at an equal or smaller size.
       const image_cache = new Map();
 
+      // Debounce timer for resize handling, and flag for first pageload sequence.
       let debounce;
       let is_first_load = true;
+
+      // Previous viewport dimensions and scale to detect meaningful changes.
       let prev_width, prev_height, prev_scale;
 
       const REASON = {
@@ -259,6 +272,10 @@
         return `images/${image_id}_${size}.avif`;
       }
 
+      // Choose the smallest available image size that meets or exceeds the
+      // required width, where required_width considers both column size and
+      // any previously loaded larger width. Falls back to the largest if none
+      // satisfies the constraint.
       function select_best_image_size(image_data, column_width) {
         // We need an image at least as large as the column, but if we've already
         // loaded larger images elsewhere, we should use at least that size.
@@ -290,6 +307,8 @@
         }
       }
 
+      // Fetch the image resource if not already cached at an adequate size.
+      // Uses a temporary Image() to leverage the onload event.
       function fetch_image(image_id, image_data, best_size, reason_key) {
         const url = get_image_url(image_id, best_size);
         const cached = image_cache.get(image_id);
@@ -313,6 +332,9 @@
         });
       }
 
+      // Perform the initial sequential load of all images in the active gallery,
+      // row by row and column by column, calculating required widths using
+      // current viewport scale.
       function sequential_first_load() {
         const active_gallery = Array.from(document.querySelectorAll('.gallery'))
           .find(g => window.getComputedStyle(g).display !== 'none');
@@ -343,6 +365,9 @@
         prev_viewport_scale  = vv?.scale  || window.devicePixelRatio || 1;
       }
 
+      // Handle viewport or device-pixel changes after initial load by
+      // reprioritising images closest to the viewport centre and fetching
+      // larger variants if needed.
       function handle_resize() {
         if (is_first_load) return;
 
@@ -367,7 +392,8 @@
         const center_x = viewport_width  / 2;
         const center_y = viewport_height / 2;
 
-        // Prioritise those closest to the center of the viewport
+        // Sort images by proximity to the viewport centre to prioritise
+        // fetching for those most likely to be viewed next.
         image_elements
           .sort((img_a, img_b) => {
             const rect_a = img_a.getBoundingClientRect();
