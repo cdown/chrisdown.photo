@@ -246,8 +246,10 @@
       // requests for the same image at an equal or smaller size.
       const image_cache = new Map();
 
-      // Debounce timer for resize handling, and flag for first pageload sequence.
-      let debounce;
+      let resize_debounce;
+
+      // We don't care about resize events before we've even set up the
+      // viewport, so ignore that.
       let is_first_load = true;
 
       // Browsers send a resize event on startup, but we want to do a
@@ -256,7 +258,6 @@
       // we don't need resize notifications yet.
       let first_load_started = false;
 
-      // Previous viewport dimensions and scale to detect meaningful changes.
       let prev_width, prev_height, prev_scale;
 
       const REASON = {
@@ -296,10 +297,6 @@
         return available_sizes.find(size => size >= required_width) || available_sizes[available_sizes.length - 1];
       }
 
-      function log_load(url, reason_key) {
-        console.log(`${url}: ${REASON_MESSAGES[reason_key]}`);
-      }
-
       function cache_and_display(image_id, url, size, reason_key) {
         document.querySelectorAll(`img[data-image-id="${image_id}"]`).forEach(el => {
           el.src = url;
@@ -307,15 +304,15 @@
         });
         image_cache.set(image_id, { url, size });
         max_loaded_width = Math.max(max_loaded_width, size);
-        log_load(url, reason_key);
+        console.log(`${url}: ${REASON_MESSAGES[reason_key]}`);
         if (is_first_load && image_cache.size === GALLERY_IMAGES.length) {
           is_first_load = false;
           console.log('First load done');
         }
       }
 
-      // Fetch the image resource if not already cached at an adequate size.
-      // Uses a temporary Image() to leverage the onload event.
+      // Fetch the image, but don't do anything if we already have it cached at
+      // an adequate size.
       function fetch_image(image_id, image_data, best_size, reason_key) {
         const url = get_image_url(image_id, best_size);
         const cached = image_cache.get(image_id);
@@ -339,9 +336,8 @@
         });
       }
 
-      // Perform the initial sequential load of all images in the active gallery,
-      // row by row and column by column, calculating required widths using
-      // current viewport scale.
+      // The initial load is sequential because we do not know who will be in
+      // the viewport yet, so we guess it's most likely at the top.
       function sequential_first_load() {
         const active_gallery = Array.from(document.querySelectorAll('.gallery'))
           .find(g => window.getComputedStyle(g).display !== 'none');
@@ -378,9 +374,8 @@
         }
       }
 
-      // Handle viewport or device-pixel changes after initial load by
-      // reprioritising images closest to the viewport centre and fetching
-      // larger variants if needed.
+      // After first load we can prioritise images closest to the viewport
+      // centre.
       function handle_resize() {
         if (is_first_load) return;
 
@@ -405,8 +400,6 @@
         const center_x = viewport_width  / 2;
         const center_y = viewport_height / 2;
 
-        // Sort images by proximity to the viewport centre to prioritise
-        // fetching for those most likely to be viewed next.
         image_elements
           .sort((img_a, img_b) => {
             const rect_a = img_a.getBoundingClientRect();
@@ -445,30 +438,20 @@
         sequential_first_load();
       });
 
-      window.addEventListener('resize', () => {
-          if (!first_load_started) {
-            return;
-          }
+      function resize_cb() {
+        if (!first_load_started) {
+          return;
+        }
         if (is_first_load) {
           console.log('First load interrupted, skipping');
           is_first_load = false;
         }
-        clearTimeout(debounce);
-        debounce = setTimeout(handle_resize, 150);
-      });
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-          if (!first_load_started) {
-            return;
-          }
-          if (is_first_load) {
-            console.log('First load interrupted, skipping');
-            is_first_load = false;
-          }
-          clearTimeout(debounce);
-          debounce = setTimeout(handle_resize, 150);
-        });
+        clearTimeout(resize_debounce);
+        resize_debounce = setTimeout(handle_resize, 150);
       }
+
+      window.addEventListener('resize', resize_cb);
+      window.visualViewport?.addEventListener('resize', resize_cb);
     })();
   </script>
 
