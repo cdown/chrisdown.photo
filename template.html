@@ -296,20 +296,18 @@
         return available_sizes.find(size => size >= required_width) || available_sizes[available_sizes.length - 1];
       }
 
-      function log_load(url, message) {
-        if (is_first_load && message !== REASON_MESSAGES[REASON.FIRST_LOAD]) return;
-        console.log(`${url}: ${message}`);
+      function log_load(url, reason_key) {
+        console.log(`${url}: ${REASON_MESSAGES[reason_key]}`);
       }
 
       function cache_and_display(image_id, url, size, reason_key) {
-        const msg = REASON_MESSAGES[reason_key] || `Loaded due to ${reason_key}`;
         document.querySelectorAll(`img[data-image-id="${image_id}"]`).forEach(el => {
           el.src = url;
           el.classList.add('loaded');
         });
         image_cache.set(image_id, { url, size });
         max_loaded_width = Math.max(max_loaded_width, size);
-        log_load(url, msg);
+        log_load(url, reason_key);
         if (is_first_load && image_cache.size === GALLERY_IMAGES.length) {
           is_first_load = false;
           console.log('First load done');
