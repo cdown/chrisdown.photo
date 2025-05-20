@@ -213,14 +213,15 @@
     const about_overlay = document.getElementById('about-overlay');
     const about_close   = document.getElementById('about-close');
 
-    function show_about_overlay() {
+    const show_about_overlay = () => {
       about_overlay.classList.add('active');
       document.body.style.overflow = 'hidden';
-    }
-    function hide_about_overlay() {
+    };
+
+    const hide_about_overlay = () => {
       about_overlay.classList.remove('active');
       document.body.style.overflow = '';
-    }
+    };
 
     about_link.addEventListener('click', show_about_overlay);
     about_close.addEventListener('click', hide_about_overlay);
@@ -236,7 +237,7 @@
    * and fetch larger variants first, ensuring the most relevant images load
    * promptly as the user moves through the page.
    */
-    (function() {
+    (() => {
       // Track the largest image width loaded across all layouts to prevent
       // subsequently loading a smaller variant once a larger image is already
       // in memory. This preserves visual fidelity and avoids redundant fetches.
@@ -257,8 +258,7 @@
       // sure we ignore ones before we first calculate the viewport size, so
       // we don't need resize notifications yet.
       let first_load_started = false;
-
-      let prev_width, prev_height, prev_scale;
+      let prev_viewport_width, prev_viewport_height, prev_viewport_scale;
 
       const REASON = {
         FIRST_LOAD:    'first_load',
@@ -271,33 +271,43 @@
         [REASON.VIEWPORT_SIZE]: 'Loaded due to viewport size increase'
       };
 
-      function create_image_element(image_data) {
-        const img = document.createElement('img');
-        img.className = 'gallery-image';
-        img.alt = image_data.title;
-        return img;
-      }
+      const get_active_gallery = () =>
+        [...document.querySelectorAll('.gallery')]
+          .find(g => getComputedStyle(g).display !== 'none');
 
-      function get_image_url(image_id, size) {
-        return `images/${image_id}_${size}.avif`;
-      }
+      const get_viewport_metrics = () => {
+        const vv = window.visualViewport;
+        const width = vv?.width  ?? window.innerWidth;
+        const height = vv?.height ?? window.innerHeight;
+        const scale = vv?.scale  ?? window.devicePixelRatio ?? 1;
+        return { width, height, scale };
+      };
+
+      const create_image_element = ({ title }) =>
+        Object.assign(document.createElement('img'), {
+          className: 'gallery-image',
+          alt: title
+        });
+
+      const get_image_url = (image_id, size) => `images/${image_id}_${size}.avif`;
 
       // Choose the smallest available image size that meets or exceeds the
       // required width, where required_width considers both column size and
       // any previously loaded larger width. Falls back to the largest if none
       // satisfies the constraint.
-      function select_best_image_size(image_data, column_width) {
+      const select_best_image_size = (image_data, column_width) => {
         // We need an image at least as large as the column, but if we've already
         // loaded larger images elsewhere, we should use at least that size.
         const required_width = Math.max(column_width, max_loaded_width);
-        const available_sizes = image_data.sizes.sort((a, b) => a - b);
+        const available_sizes = [...image_data.sizes].sort((a, b) => a - b);
 
         // Select the smallest size that satisfies our width requirement. If none
         // are large enough, use the largest available
-        return available_sizes.find(size => size >= required_width) || available_sizes[available_sizes.length - 1];
-      }
+        return available_sizes.find(s => s >= required_width)
+          ?? available_sizes[available_sizes.length - 1];
+      };
 
-      function cache_and_display(image_id, url, size, reason_key) {
+      const cache_and_display = (image_id, url, size, reason_key) => {
         document.querySelectorAll(`img[data-image-id="${image_id}"]`).forEach(el => {
           el.src = url;
           el.classList.add('loaded');
@@ -309,124 +319,101 @@
           is_first_load = false;
           console.log('First load done');
         }
-      }
+      };
 
       // Fetch the image, but don't do anything if we already have it cached at
       // an adequate size.
-      function fetch_image(image_id, image_data, best_size, reason_key) {
+      const fetch_image = (image_id, image_data, best_size, reason_key) => {
         const url = get_image_url(image_id, best_size);
         const cached = image_cache.get(image_id);
         if (cached && best_size <= cached.size) return;
         const tmp = new Image();
         tmp.onload = () => cache_and_display(image_id, url, best_size, reason_key);
         tmp.src = url;
-      }
+      };
 
-      function setup_column_layout(column_id, image_ids) {
+      const setup_column_layout = (column_id, image_ids) => {
         const column = document.getElementById(column_id);
         if (!column) return;
         column.innerHTML = '';
         image_ids.forEach(id => {
           const data = GALLERY_IMAGES.find(img => img.id === id);
           if (!data) return;
-          const img = create_image_element(data);
+          const img = create_image_element(data.title);
           img.dataset.imageId = id;
           img.id = `img-${column_id}-${id}`;
           column.appendChild(img);
         });
-      }
+      };
 
       // The initial load is sequential because we do not know who will be in
       // the viewport yet, so we guess it's most likely at the top.
-      function sequential_first_load() {
-        const active_gallery = Array.from(document.querySelectorAll('.gallery'))
-          .find(g => window.getComputedStyle(g).display !== 'none');
+      const sequential_first_load = () => {
+        const active_gallery = get_active_gallery();
         if (!active_gallery) return;
 
-        const columns = Array.from(active_gallery.querySelectorAll('.column'));
+        const columns = [...active_gallery.querySelectorAll('.column')];
         const max_rows = Math.max(...columns.map(col => col.children.length));
 
         first_load_started = true;
+        const { width, height, scale } = get_viewport_metrics();
+        prev_viewport_width  = width;
+        prev_viewport_height = height;
+        prev_viewport_scale  = scale;
 
-        const vv = window.visualViewport;
-        prev_viewport_width  = vv?.width  || window.innerWidth;
-        prev_viewport_height = vv?.height || window.innerHeight;
-        prev_viewport_scale  = vv?.scale  || window.devicePixelRatio || 1;
-
-        for (let row_index = 0; row_index < max_rows; row_index++) {
+        for (let row = 0; row < max_rows; row++) {
           if (!is_first_load) {
             console.log('First load aborted');
             return;
           }
-          for (let col_index = 0; col_index < columns.length; col_index++) {
-            const img_el = columns[col_index].children[row_index];
-            if (!img_el) continue;
-
-            const image_id      = img_el.dataset.imageId;
-            const image_data    = GALLERY_IMAGES.find(d => d.id === image_id);
-            const column_width  = columns[col_index].getBoundingClientRect().width;
-            const viewport_scale = window.visualViewport?.scale || window.devicePixelRatio || 1;
-            const required_width = column_width * viewport_scale;
-            const best_size     = select_best_image_size(image_data, required_width);
-
+          columns.forEach(column => {
+            const img_el = column.children[row];
+            if (!img_el) return;
+            const image_id = img_el.dataset.imageId;
+            const image_data = GALLERY_IMAGES.find(d => d.id === image_id);
+            const column_width = column.getBoundingClientRect().width;
+            const best_size = select_best_image_size(image_data, column_width * scale);
             fetch_image(image_id, image_data, best_size, REASON.FIRST_LOAD);
-          }
+          });
         }
-      }
+      };
 
       // After first load we can prioritise images closest to the viewport
       // centre.
-      function handle_resize() {
+      const handle_resize = () => {
         if (is_first_load) return;
 
-        const vv = window.visualViewport;
-        const viewport_width  = vv?.width  || window.innerWidth;
-        const viewport_height = vv?.height || window.innerHeight;
-        const viewport_scale  = vv?.scale  || window.devicePixelRatio || 1;
+        const { width, height, scale } = get_viewport_metrics();
+        const reason_key = scale !== prev_viewport_scale
+          ? REASON.PIXEL_SCALING
+          : REASON.VIEWPORT_SIZE;
 
-        let reason_key = REASON.VIEWPORT_SIZE;
-        if (viewport_scale !== prev_viewport_scale) {
-          reason_key = REASON.PIXEL_SCALING;
-        }
-        prev_viewport_width  = viewport_width;
-        prev_viewport_height = viewport_height;
-        prev_viewport_scale  = viewport_scale;
+        [prev_viewport_width, prev_viewport_height, prev_viewport_scale] =
+          [width, height, scale];
 
-        const active_gallery = Array.from(document.querySelectorAll('.gallery'))
-          .find(g => window.getComputedStyle(g).display !== 'none');
+        const active_gallery = get_active_gallery();
         if (!active_gallery) return;
 
-        const image_elements = Array.from(active_gallery.querySelectorAll('.column img'));
-        const center_x = viewport_width  / 2;
-        const center_y = viewport_height / 2;
+        const center_x = width / 2;
+        const center_y = height / 2;
 
-        image_elements
-          .sort((img_a, img_b) => {
-            const rect_a = img_a.getBoundingClientRect();
-            const rect_b = img_b.getBoundingClientRect();
-
-            const center_a_x = rect_a.left + rect_a.width  / 2;
-            const center_a_y = rect_a.top  + rect_a.height / 2;
-            const center_b_x = rect_b.left + rect_b.width  / 2;
-            const center_b_y = rect_b.top  + rect_b.height / 2;
-
-            const distance_a = Math.hypot(center_a_x - center_x, center_a_y - center_y);
-            const distance_b = Math.hypot(center_b_x - center_x, center_b_y - center_y);
-
-            return distance_a - distance_b;
+        [...active_gallery.querySelectorAll('.column img')]
+          .sort((a, b) => {
+            const ra = a.getBoundingClientRect();
+            const rb = b.getBoundingClientRect();
+            const da = Math.hypot(ra.left + ra.width/2 - center_x, ra.top + ra.height/2 - center_y);
+            const db = Math.hypot(rb.left + rb.width/2 - center_x, rb.top + rb.height/2 - center_y);
+            return da - db;
           })
           .forEach(img_el => {
-            const column        = img_el.closest('.column');
-            const column_width  = column.getBoundingClientRect().width;
-            const required_width = column_width * viewport_scale;
-
-            const image_id   = img_el.dataset.imageId;
+            const column = img_el.closest('.column');
+            const column_width = column.getBoundingClientRect().width;
+            const image_id = img_el.dataset.imageId;
             const image_data = GALLERY_IMAGES.find(d => d.id === image_id);
-            const best_size  = select_best_image_size(image_data, required_width);
-
+            const best_size = select_best_image_size(image_data, column_width * scale);
             fetch_image(image_id, image_data, best_size, reason_key);
           });
-      }
+      };
 
       window.addEventListener('DOMContentLoaded', () => {
         setup_column_layout('one-col-container',   LAYOUT_CONFIG.one_col.images);
@@ -438,17 +425,15 @@
         sequential_first_load();
       });
 
-      function resize_cb() {
-        if (!first_load_started) {
-          return;
-        }
+      const resize_cb = () => {
+        if (!first_load_started) return;
         if (is_first_load) {
           console.log('First load interrupted, skipping');
           is_first_load = false;
         }
         clearTimeout(resize_debounce);
         resize_debounce = setTimeout(handle_resize, 150);
-      }
+      };
 
       window.addEventListener('resize', resize_cb);
       window.visualViewport?.addEventListener('resize', resize_cb);
