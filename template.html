@@ -278,12 +278,18 @@
 
       setupColumnLayout(columnId, imageIds) {
         const column = document.getElementById(columnId);
-        if (!column) return;
+        if (!column) {
+          console.warn(`Column element not found: ${columnId}`);
+          return;
+        }
 
         column.innerHTML = '';
         imageIds.forEach(id => {
           const imageData = GALLERY_IMAGES.find(img => img.id === id);
-          if (!imageData) return;
+          if (!imageData) {
+            console.warn(`Image data not found: ${id}`);
+            return;
+          }
 
           const img = this.createImageElement(imageData);
           img.dataset.imageId = id;
@@ -302,7 +308,10 @@
 
       async startInitialLoad() {
         const activeGallery = this.getActiveGallery();
-        if (!activeGallery) return;
+        if (!activeGallery) {
+          console.warn('No active gallery found');
+          return;
+        }
 
         const columns = [...activeGallery.querySelectorAll('.column')];
         const maxRows = Math.max(...columns.map(col => col.children.length));
