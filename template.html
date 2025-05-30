@@ -230,7 +230,8 @@
   /**
    * On first load we append all <img> elements at zero size and fetch images
    * sequentially because their rendered dimensions aren't known until placed
-   * in the DOM.
+   * in the DOM. We want to do it sequentially to get an image on screen as
+   * soon as possible.
    *
    * After that pass completes, we monitor viewport size and device pixel
    * scaling. On resize, we sort images by proximity to the viewport centre
@@ -259,6 +260,18 @@
       // we don't need resize notifications yet.
       let first_load_started = false;
       let prev_viewport_width, prev_viewport_height, prev_viewport_scale;
+
+      class LoadRequest {
+        constructor(image_id, image_data, best_size, reason_key) {
+          this.image_id = image_id;
+          this.image_data = image_data;
+          this.best_size = best_size;
+          this.reason_key = reason_key;
+        }
+      }
+
+      const loading_queue = [];
+      let is_loading = false;
 
       const REASON = {
         FIRST_LOAD:    'first_load',
@@ -321,15 +334,35 @@
         }
       };
 
+      const process_loading_queue = () => {
+        if (is_loading || loading_queue.length === 0) return;
+
+        is_loading = true;
+        const request = loading_queue.shift();
+        const url = get_image_url(request.image_id, request.best_size);
+        const cached = image_cache.get(request.image_id);
+
+        if (cached && request.best_size <= cached.size) {
+          is_loading = false;
+          process_loading_queue();
+          return;
+        }
+
+        const tmp = new Image();
+        tmp.onload = () => {
+          cache_and_display(request.image_id, url, request.best_size, request.reason_key);
+          is_loading = false;
+          process_loading_queue();
+        };
+        tmp.src = url;
+      };
+
       // Fetch the image, but don't do anything if we already have it cached at
       // an adequate size.
       const fetch_image = (image_id, image_data, best_size, reason_key) => {
-        const url = get_image_url(image_id, best_size);
-        const cached = image_cache.get(image_id);
-        if (cached && best_size <= cached.size) return;
-        const tmp = new Image();
-        tmp.onload = () => cache_and_display(image_id, url, best_size, reason_key);
-        tmp.src = url;
+        const request = new LoadRequest(image_id, image_data, best_size, reason_key);
+        loading_queue.push(request);
+        process_loading_queue();
       };
 
       const setup_column_layout = (column_id, image_ids) => {
@@ -396,6 +429,9 @@
 
         const center_x = width / 2;
         const center_y = height / 2;
+
+        // Any preexisting work is not helpful now, yeet it
+        loading_queue.length = 0;
 
         [...active_gallery.querySelectorAll('.column img')]
           .sort((a, b) => {
