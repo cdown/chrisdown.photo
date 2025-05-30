@@ -359,7 +359,7 @@
         window.visualViewport?.addEventListener('resize', handleResize);
       }
 
-      handleResize() {
+      async handleResize() {
         const { width, height, scale } = this.getViewportMetrics();
         const reasonKey = scale !== this.prevViewportScale
           ? LOAD_REASONS.PIXEL_SCALING
@@ -369,7 +369,7 @@
         this.prevViewportHeight = height;
         this.prevViewportScale = scale;
 
-        this.prioritiseVisibleImages(reasonKey);
+        await this.prioritiseVisibleImages(reasonKey);
       }
 
       getActiveGallery() {
@@ -377,7 +377,7 @@
           .find(g => getComputedStyle(g).display !== 'none');
       }
 
-      prioritiseVisibleImages(reasonKey) {
+      async prioritiseVisibleImages(reasonKey) {
         const activeGallery = this.getActiveGallery();
         if (!activeGallery) return;
 
@@ -386,17 +386,18 @@
         const centerY = height / 2;
 
         // Sort images by distance from viewport center
-        [...activeGallery.querySelectorAll('.column img')]
+        const sortedImages = [...activeGallery.querySelectorAll('.column img')]
           .sort((a, b) => {
             const rectA = a.getBoundingClientRect();
             const rectB = b.getBoundingClientRect();
             const distA = Math.hypot(rectA.left + rectA.width/2 - centerX, rectA.top + rectA.height/2 - centerY);
             const distB = Math.hypot(rectB.left + rectB.width/2 - centerX, rectB.top + rectB.height/2 - centerY);
             return distA - distB;
-          })
-          .forEach(imgElement => {
-            this.loadImageForElement(imgElement, reasonKey);
           });
+
+        for (const imgElement of sortedImages) {
+          await this.loadImageForElement(imgElement, reasonKey);
+        }
       }
 
       async loadImageForElement(imgElement, reason) {
