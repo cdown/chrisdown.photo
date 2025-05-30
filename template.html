@@ -257,6 +257,7 @@
         this.prevViewportWidth = null;
         this.prevViewportHeight = null;
         this.prevViewportScale = null;
+        this.currentActiveGalleryId = null;
 
         this.init();
       }
@@ -317,6 +318,7 @@
         const maxRows = Math.max(...columns.map(col => col.children.length));
 
         this.initialViewportConfigured = true;
+        this.currentActiveGalleryId = activeGallery.id;
         const { width, height, scale } = this.getViewportMetrics();
         this.prevViewportWidth = width;
         this.prevViewportHeight = height;
@@ -346,8 +348,12 @@
         const handleResize = () => {
           if (!this.initialViewportConfigured) return;
 
-          if (this.firstLoadInProgress) {
-            console.log('First load interrupted by resize');
+          const activeGallery = this.getActiveGallery();
+          const newActiveGalleryId = activeGallery?.id;
+
+          // Only interrupt first load if the number of columns changed
+          if (this.firstLoadInProgress && newActiveGalleryId !== this.currentActiveGalleryId) {
+            console.log('First load interrupted by column layout change');
             this.firstLoadInProgress = false;
           }
 
@@ -360,6 +366,10 @@
       }
 
       async handleResize() {
+        const activeGallery = this.getActiveGallery();
+        const newActiveGalleryId = activeGallery?.id;
+        this.currentActiveGalleryId = newActiveGalleryId;
+
         const { width, height, scale } = this.getViewportMetrics();
         const reasonKey = scale !== this.prevViewportScale
           ? LOAD_REASONS.PIXEL_SCALING
