@@ -251,8 +251,8 @@
       constructor() {
         this.imageCache = new Map();
         this.maxLoadedWidth = 0;
-        this.isFirstLoad = true;
-        this.firstLoadStarted = false;
+        this.firstLoadInProgress = true;
+        this.initialViewportConfigured = false;
         this.resizeDebounce = null;
         this.prevViewportWidth = null;
         this.prevViewportHeight = null;
@@ -307,7 +307,7 @@
         const columns = [...activeGallery.querySelectorAll('.column')];
         const maxRows = Math.max(...columns.map(col => col.children.length));
 
-        this.firstLoadStarted = true;
+        this.initialViewportConfigured = true;
         const { width, height, scale } = this.getViewportMetrics();
         this.prevViewportWidth = width;
         this.prevViewportHeight = height;
@@ -316,7 +316,7 @@
         // We don't really know what's in the viewport yet, so load row by row
         // to prioritise images at the top of the page
         for (let row = 0; row < maxRows; row++) {
-          if (!this.isFirstLoad) {
+          if (!this.firstLoadInProgress) {
             console.log('First load aborted');
             return;
           }
@@ -329,17 +329,17 @@
           }
         }
 
-        this.isFirstLoad = false;
+        this.firstLoadInProgress = false;
         console.log('First load completed');
       }
 
       setupResizeHandler() {
         const handleResize = () => {
-          if (!this.firstLoadStarted) return;
+          if (!this.initialViewportConfigured) return;
 
-          if (this.isFirstLoad) {
+          if (this.firstLoadInProgress) {
             console.log('First load interrupted by resize');
-            this.isFirstLoad = false;
+            this.firstLoadInProgress = false;
           }
 
           clearTimeout(this.resizeDebounce);
