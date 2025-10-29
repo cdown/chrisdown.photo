@@ -37,6 +37,8 @@ items:
     flickr: https://www.flickr.com/photos/chrisdown/53289077517
   - &se_owl
     flickr: https://www.flickr.com/photos/chrisdown/54523918222
+  - &grouse
+    flickr: https://www.flickr.com/photos/chrisdown/54887653883/
 
 layouts:
   one_col:
@@ -45,6 +47,7 @@ layouts:
     - *toucan
     - *dartford
     - *bufflehead
+    - *grouse
     - *parula
     - *honeycreeper
     - *vulture
@@ -65,12 +68,12 @@ layouts:
       - *bufflehead
       - *honeycreeper
       - *vulture
+      - *grouse
       - *crane
       - *se_owl
       - *puffin_yellow
       - *heron
       - *parrot
-      - *flowerpecker
     col2:
       - *toucan
       - *owl
@@ -80,6 +83,7 @@ layouts:
       - *kingfisher
       - *flamingo
       - *ibis
+      - *flowerpecker
 
   three_col:
     col1:
@@ -96,13 +100,14 @@ layouts:
       - *vulture
       - *puffin_calling
       - *flamingo
+      - *flowerpecker
     col3:
       - *owl
+      - *grouse
       - *crane
       - *se_owl
       - *parrot
       - *ibis
-      - *flowerpecker
 
 about:
   text:
