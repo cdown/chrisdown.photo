@@ -101,10 +101,12 @@
       display: block;
       background-color: rgba(0,0,0,0.05);
       opacity: 0;
-      transition: opacity 0.5s ease;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
     }
     .gallery-image.lazyloaded {
       opacity: 1;
+      transform: translateY(0);
     }
 
     dialog.about-overlay {
