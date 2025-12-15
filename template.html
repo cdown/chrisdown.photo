@@ -273,7 +273,7 @@
         }
 
         column.innerHTML = '';
-        imageIds.forEach(id => {
+        imageIds.forEach((id, index) => {
           const imageData = GALLERY_IMAGES.find(img => img.id === id);
           if (!imageData) {
             console.warn(`Image data not found: ${id}`);
@@ -283,6 +283,7 @@
           const img = this.createImageElement(imageData);
           img.dataset.imageId = id;
           img.id = `img-${columnId}-${id}`;
+          img.style.transitionDelay = `${index * 0.08}s`;
           column.appendChild(img);
         });
       }
