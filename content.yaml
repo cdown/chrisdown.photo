@@ -39,6 +39,8 @@ items:
     flickr: https://www.flickr.com/photos/chrisdown/54523918222
   - &grouse
     flickr: https://www.flickr.com/photos/chrisdown/54887653883/
+  - &weaver
+    flickr: https://www.flickr.com/photos/chrisdown/54999478886/
 
 layouts:
   one_col:
@@ -46,6 +48,7 @@ layouts:
     - *owl
     - *toucan
     - *dartford
+    - *weaver
     - *bufflehead
     - *grouse
     - *parula
@@ -78,6 +81,7 @@ layouts:
       - *toucan
       - *owl
       - *dartford
+      - *weaver
       - *puffin_calling
       - *parula
       - *kingfisher
@@ -90,6 +94,7 @@ layouts:
       - *puffin
       - *bufflehead
       - *honeycreeper
+      - *weaver
       - *kingfisher
       - *puffin_yellow
       - *heron
