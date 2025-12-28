@@ -109,6 +109,8 @@ def _resize(src, dest, width, danger_of_banding=False):
             "420",
             "--advanced",
             "enable-qm=1",
+            "--advanced",
+            "enable-rect-partitions=1",
             "-j",
             "1",
             tmp_png,
