@@ -43,6 +43,7 @@ items:
     flickr: https://www.flickr.com/photos/chrisdown/54999478886/
   - &merg
     flickr: https://www.flickr.com/photos/chrisdown/55010401919
+    danger_of_banding: true
 
 layouts:
   one_col:
