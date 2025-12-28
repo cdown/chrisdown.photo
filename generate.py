@@ -68,15 +68,6 @@ def _dimensions(path):
 
 def _resize(src, dest, width, danger_of_banding=False):
     quality = "85" if danger_of_banding else "75"
-    # If there's a danger of banding we do two things to try to mitigate it,
-    # since we can't use 16-bit AVIF due to 8-bit rendering pipeline in
-    # browsers:
-    #
-    # 1. Bump the quality
-    # 2. Add a little noise
-    noise_args = (
-        ["-attenuate", "0.04", "+noise", "Gaussian"] if danger_of_banding else []
-    )
 
     tmp_png = dest.replace(".avif", "_tmp.png")
     cmd = [
@@ -89,9 +80,6 @@ def _resize(src, dest, width, danger_of_banding=False):
         "-resize",
         str(width),
     ]
-
-    if noise_args:
-        cmd.extend(noise_args)
 
     cmd.append(tmp_png)
     subprocess.run(cmd, check=True)
@@ -119,7 +107,7 @@ def _resize(src, dest, width, danger_of_banding=False):
     # Generate JPEG fallback for Firefox due to colour management issues with
     # AVIF. Sigh...
     jpeg_dest = dest.replace(".avif", ".jpg")
-    jpeg_quality = "90" if danger_of_banding else "85"
+    jpeg_quality = "95" if danger_of_banding else "90"
     subprocess.run(
         [
             "magick",
