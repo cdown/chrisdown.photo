@@ -67,7 +67,7 @@ def _dimensions(path):
 
 
 def _resize(src, dest, width, danger_of_banding=False):
-    quality = "75" if danger_of_banding else "55"
+    quality = "85" if danger_of_banding else "75"
     # If there's a danger of banding we do two things to try to mitigate it,
     # since we can't use 16-bit AVIF due to 8-bit rendering pipeline in
     # browsers:
