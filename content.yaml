@@ -41,12 +41,15 @@ items:
     flickr: https://www.flickr.com/photos/chrisdown/54887653883/
   - &weaver
     flickr: https://www.flickr.com/photos/chrisdown/54999478886/
+  - &merg
+    flickr: https://www.flickr.com/photos/chrisdown/55010401919
 
 layouts:
   one_col:
     - *puffin
     - *owl
     - *toucan
+    - *merg
     - *dartford
     - *weaver
     - *bufflehead
@@ -70,6 +73,7 @@ layouts:
       - *puffin
       - *bufflehead
       - *honeycreeper
+      - *merg
       - *vulture
       - *grouse
       - *crane
@@ -101,6 +105,7 @@ layouts:
     col2:
       - *toucan
       - *dartford
+      - *merg
       - *parula
       - *vulture
       - *puffin_calling
