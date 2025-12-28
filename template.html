@@ -292,6 +292,21 @@
         );
 
         galleries.forEach(gallery => this.layoutObserver.observe(gallery));
+
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+          clearTimeout(resizeTimeout);
+          resizeTimeout = setTimeout(() => this.checkForUpgrades(), 300);
+        });
+      }
+
+      checkForUpgrades() {
+        const images = this.getVisibleImages();
+        images.forEach(img => {
+          if (this.loadedImages.has(img)) {
+            this.ensureImageLoaded(img);
+          }
+        });
       }
 
       handleLayoutChange() {
@@ -327,53 +342,54 @@
         }
       }
 
-      loadImage(img) {
-        if (this.loadedImages.has(img) || this.loadingImages.has(img)) {
-          return;
+      calculateOptimalSize(img, imageData) {
+        const elementWidth = img.getBoundingClientRect().width;
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        const targetWidth = Math.ceil(elementWidth * devicePixelRatio);
+        return imageData.sizes.find(s => s >= targetWidth) || imageData.sizes[imageData.sizes.length - 1];
+      }
+
+      ensureImageLoaded(img, forceUpgrade = false) {
+        const imageId = img.dataset.imageId;
+        const imageData = GALLERY_IMAGES.find(i => i.id === imageId);
+
+        if (!imageData) {
+          console.warn(`Image data not found for id: ${imageId}`);
+          return false;
         }
 
-        const imageId = img.dataset.imageId;
-        const srcset = img.getAttribute('data-srcset');
-        const src = img.getAttribute('data-src');
-
         const maxLoadedSize = this.imageMaxSizes.get(imageId) || 0;
-        const imgWidth = img.width || 0;
+        const optimalSize = this.calculateOptimalSize(img, imageData);
 
-        if (maxLoadedSize > 0) {
-          // We've loaded this image before. Check if current size is smaller.
-          if (imgWidth <= maxLoadedSize) {
-            // Use the already-loaded larger version
-            const imageData = GALLERY_IMAGES.find(i => i.id === imageId);
-            if (imageData) {
-              // Find the size we loaded before and use that
-              const loadedSize = imageData.sizes.find(s => s >= maxLoadedSize) || imageData.sizes[imageData.sizes.length - 1];
-              img.src = `images/${imageId}_${loadedSize}.avif`;
-              img.classList.add('lazyloaded');
-              this.loadedImages.add(img);
-              this.checkAndLoad();
-              return;
-            }
+        // Already loaded at sufficient or larger size
+        if (maxLoadedSize >= optimalSize && !forceUpgrade) {
+          if (!this.loadedImages.has(img)) {
+            // Set the cached larger image
+            const reuseSize = imageData.sizes.find(s => s >= maxLoadedSize) || imageData.sizes[imageData.sizes.length - 1];
+            img.src = `images/${imageId}_${reuseSize}.avif`;
+            img.classList.add('lazyloaded');
+            this.loadedImages.add(img);
+            this.checkAndLoad();
           }
+          return false; // No new load needed
+        }
+
+        // Need to load (or upgrade to) optimalSize
+        if (this.loadingImages.has(img)) {
+          return false; // Already loading
         }
 
         this.loadingImages.add(img);
-
-        if (srcset) {
-          img.srcset = srcset;
-        }
-        if (src) {
-          img.src = src;
-        }
+        img.src = `images/${imageId}_${optimalSize}.avif`;
 
         const handleLoad = () => {
           this.loadingImages.delete(img);
           this.loadedImages.add(img);
           img.classList.add('lazyloaded');
 
-          const loadedWidth = img.naturalWidth;
           const currentMax = this.imageMaxSizes.get(imageId) || 0;
-          if (loadedWidth > currentMax) {
-            this.imageMaxSizes.set(imageId, loadedWidth);
+          if (optimalSize > currentMax) {
+            this.imageMaxSizes.set(imageId, optimalSize);
           }
 
           img.removeEventListener('load', handleLoad);
@@ -391,6 +407,14 @@
 
         img.addEventListener('load', handleLoad);
         img.addEventListener('error', handleError);
+        return true; // Started new load
+      }
+
+      loadImage(img) {
+        if (this.loadedImages.has(img)) {
+          return;
+        }
+        this.ensureImageLoaded(img);
       }
 
       getVisibleImages() {
@@ -513,10 +537,6 @@
         const img = document.createElement('img');
         img.className = 'gallery-image';
         img.alt = imageData.title;
-        img.setAttribute('data-srcset',
-          imageData.sizes.map(s => `images/${imageData.id}_${s}.avif ${s}w`).join(', ')
-        );
-        img.setAttribute('data-src', `images/${imageData.id}_${imageData.sizes[0]}.avif`);
         if (imageData.width && imageData.height) {
           img.width = imageData.width;
           img.height = imageData.height;
