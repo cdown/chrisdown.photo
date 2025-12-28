@@ -129,11 +129,15 @@ def _generate_image_data(item):
     danger_of_banding = item.get("danger_of_banding", False)
     data = get_flickr_image(item["flickr"], danger_of_banding)
     pid = _photo_id(item["flickr"])
+    cache = _load_cache()
+    meta = cache.get(pid, {})
 
     return {
         "id": pid,
         "title": data.title,
         "sizes": IMG_WIDTHS,
+        "width": meta.get("width"),
+        "height": meta.get("height"),
     }
 
 

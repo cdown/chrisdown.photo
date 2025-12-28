@@ -98,6 +98,7 @@
     }
     .gallery-image {
       width: 100%;
+      height: auto;
       display: block;
       background-color: rgba(0,0,0,0.05);
       opacity: 0;
@@ -302,6 +303,10 @@
           imageData.sizes.map(s => `images/${imageData.id}_${s}.avif ${s}w`).join(', ')
         );
         img.setAttribute('data-src', `images/${imageData.id}_${imageData.sizes[0]}.avif`);
+        if (imageData.width && imageData.height) {
+          img.width = imageData.width;
+          img.height = imageData.height;
+        }
         /* transparent placeholder so we get the right width before js kicks in */
         img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
         return img;
