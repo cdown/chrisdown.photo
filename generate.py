@@ -67,7 +67,7 @@ def _dimensions(path):
 
 
 def _resize(src, dest, width, danger_of_banding=False):
-    quality = "85" if danger_of_banding else "75"
+    quality = "90" if danger_of_banding else "85"
 
     tmp_png = dest.replace(".avif", "_tmp.png")
     cmd = [
