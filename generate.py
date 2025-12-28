@@ -96,28 +96,21 @@ def _resize(src, dest, width, danger_of_banding=False):
     cmd.append(tmp_png)
     subprocess.run(cmd, check=True)
 
-    # ImageMagick's AVIF encoder is pretty limited, --speed and --yuv help a
-    # lot with file size.
+    # cavif uses rav1e which supports RGB encoding natively
     subprocess.run(
         [
-            "avifenc",
-            "-q",
+            "cavif",
+            "--quality",
             quality,
             "--speed",
-            "0",
-            "--yuv",
-            "420",
+            "1",
             "--depth",
             "8",
-            "--cicp",
-            "1/13/1",
-            "--advanced",
-            "enable-qm=1",
-            "--advanced",
-            "enable-rect-partitions=1",
-            "-j",
-            "1",
+            "--color",
+            "rgb",
+            "--overwrite",
             tmp_png,
+            "--output",
             dest,
         ],
         check=True,
