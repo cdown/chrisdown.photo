@@ -295,10 +295,16 @@
         galleries.forEach(gallery => this.layoutObserver.observe(gallery));
 
         let resizeTimeout;
-        window.addEventListener('resize', () => {
+        const checkUpgrades = () => {
           clearTimeout(resizeTimeout);
           resizeTimeout = setTimeout(() => this.checkForUpgrades(), 300);
-        });
+        };
+
+        window.addEventListener('resize', checkUpgrades);
+
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', checkUpgrades);
+        }
       }
 
       checkForUpgrades() {
@@ -346,7 +352,8 @@
       calculateOptimalSize(img, imageData) {
         const elementWidth = img.getBoundingClientRect().width;
         const devicePixelRatio = window.devicePixelRatio || 1;
-        const targetWidth = Math.ceil(elementWidth * devicePixelRatio);
+        const zoomScale = window.visualViewport ? window.visualViewport.scale : 1;
+        const targetWidth = Math.ceil(elementWidth * devicePixelRatio * zoomScale);
         return imageData.sizes.find(s => s >= targetWidth) || imageData.sizes[imageData.sizes.length - 1];
       }
 
