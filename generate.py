@@ -107,6 +107,8 @@ def _resize(src, dest, width, danger_of_banding=False):
             "0",
             "--yuv",
             "420",
+            "--depth",
+            "8",
             "--advanced",
             "enable-qm=1",
             "--advanced",
