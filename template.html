@@ -103,12 +103,14 @@
       background-color: rgba(0,0,0,0.05);
       opacity: 0;
       transform: translateY(20px);
-      box-shadow: 0 0 0 rgba(0,0,0,0);
-      transition: opacity 0.4s ease-out, transform 0.4s ease-out, box-shadow 0.3s ease-out;
+      will-change: opacity, transform;
+      transition: opacity 0.4s ease-out, transform 0.4s ease-out;
     }
     .gallery-image.lazyloaded {
       opacity: 1;
       transform: translateY(0);
+      will-change: auto;
+      transition: box-shadow 0.3s ease-out;
     }
     .gallery-image.lazyloaded:hover {
       box-shadow: 0 8px 24px rgba(0,0,0,0.12);
@@ -252,12 +254,224 @@
       }
     }
 
-    new ModalManager('#about-link', '#about-overlay');
-  </script>
+    class LazyLoader {
+      constructor() {
+        this.loadingImages = new Set();
+        this.loadedImages = new Set();
+        this.imageMaxSizes = new Map(); // imageId -> max width loaded
+        this.currentLayout = null;
+        this.sequentialMode = false;
+        this.maxConcurrentLoads = 2;
+        this.cachedVisibleImages = null;
+        this.layoutObserver = null;
 
-  <script>
+        // Load images in viewport + 50% more viewport height simultaneously
+        this.viewportObserver = new IntersectionObserver(
+          (entries) => this.handleIntersection(entries),
+          { rootMargin: '50% 0px' }
+        );
+
+        this.setupLayoutObserver();
+      }
+
+      setupLayoutObserver() {
+        const galleries = document.querySelectorAll('.gallery');
+        this.layoutObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting && entry.intersectionRatio > 0) {
+                const newLayout = entry.target.id;
+                if (this.currentLayout !== newLayout) {
+                  this.currentLayout = newLayout;
+                  this.handleLayoutChange();
+                }
+              }
+            });
+          },
+          { threshold: 0.01 }
+        );
+
+        galleries.forEach(gallery => this.layoutObserver.observe(gallery));
+      }
+
+      handleLayoutChange() {
+        this.sequentialMode = false;
+        this.loadedImages.clear();
+        this.loadingImages.clear();
+        this.cachedVisibleImages = null;
+        this.viewportObserver.disconnect();
+        const images = this.getVisibleImages();
+        images.forEach(img => this.viewportObserver.observe(img));
+        setTimeout(() => this.checkAndLoad(), 0);
+      }
+
+      handleIntersection(entries) {
+        if (this.sequentialMode) {
+          return; // Don't interrupt sequential loading
+        }
+
+        // Load all viewport images simultaneously
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            if (!this.loadedImages.has(img) && !this.loadingImages.has(img)) {
+              this.loadImage(img);
+            }
+          }
+        });
+      }
+
+      observeImage(img) {
+        if (!this.sequentialMode) {
+          this.viewportObserver.observe(img);
+        }
+      }
+
+      loadImage(img) {
+        if (this.loadedImages.has(img) || this.loadingImages.has(img)) {
+          return;
+        }
+
+        const imageId = img.dataset.imageId;
+        const srcset = img.getAttribute('data-srcset');
+        const src = img.getAttribute('data-src');
+
+        const maxLoadedSize = this.imageMaxSizes.get(imageId) || 0;
+        const imgWidth = img.width || 0;
+
+        if (maxLoadedSize > 0) {
+          // We've loaded this image before. Check if current size is smaller.
+          if (imgWidth <= maxLoadedSize) {
+            // Use the already-loaded larger version
+            const imageData = GALLERY_IMAGES.find(i => i.id === imageId);
+            if (imageData) {
+              // Find the size we loaded before and use that
+              const loadedSize = imageData.sizes.find(s => s >= maxLoadedSize) || imageData.sizes[imageData.sizes.length - 1];
+              img.src = `images/${imageId}_${loadedSize}.avif`;
+              img.classList.add('lazyloaded');
+              this.loadedImages.add(img);
+              this.checkAndLoad();
+              return;
+            }
+          }
+        }
+
+        this.loadingImages.add(img);
+
+        if (srcset) {
+          img.srcset = srcset;
+        }
+        if (src) {
+          img.src = src;
+        }
+
+        const handleLoad = () => {
+          this.loadingImages.delete(img);
+          this.loadedImages.add(img);
+          img.classList.add('lazyloaded');
+
+          const loadedWidth = img.naturalWidth;
+          const currentMax = this.imageMaxSizes.get(imageId) || 0;
+          if (loadedWidth > currentMax) {
+            this.imageMaxSizes.set(imageId, loadedWidth);
+          }
+
+          img.removeEventListener('load', handleLoad);
+          img.removeEventListener('error', handleError);
+          this.checkAndLoad();
+        };
+
+        const handleError = () => {
+          this.loadingImages.delete(img);
+          img.classList.add('lazyerror');
+          img.removeEventListener('load', handleLoad);
+          img.removeEventListener('error', handleError);
+          this.checkAndLoad();
+        };
+
+        img.addEventListener('load', handleLoad);
+        img.addEventListener('error', handleError);
+      }
+
+      getVisibleImages() {
+        if (this.cachedVisibleImages) {
+          return this.cachedVisibleImages;
+        }
+
+        const galleries = document.querySelectorAll('.gallery');
+        let visibleGallery = null;
+
+        for (const gallery of galleries) {
+          const style = window.getComputedStyle(gallery);
+          if (style.display !== 'none') {
+            visibleGallery = gallery;
+            break;
+          }
+        }
+
+        if (!visibleGallery) return [];
+
+        const images = Array.from(visibleGallery.querySelectorAll('.gallery-image'));
+
+        // Sort by vertical position
+        images.sort((a, b) => {
+          const rectA = a.getBoundingClientRect();
+          const rectB = b.getBoundingClientRect();
+          return rectA.top - rectB.top;
+        });
+
+        return images;
+      }
+
+      getNextUnloadedImages(count) {
+        const images = this.getVisibleImages();
+        const result = [];
+
+        for (const img of images) {
+          if (!this.loadedImages.has(img) && !this.loadingImages.has(img)) {
+            result.push(img);
+            if (result.length >= count) {
+              break;
+            }
+          }
+        }
+
+        return result;
+      }
+
+      checkAndLoad() {
+        const allImages = this.getVisibleImages();
+        const unloadedCount = allImages.filter(
+          img => !this.loadedImages.has(img) && !this.loadingImages.has(img)
+        ).length;
+
+        // If all viewport images are loaded/loading, switch to sequential mode
+        if (!this.sequentialMode && this.loadingImages.size === 0 && unloadedCount > 0) {
+          this.sequentialMode = true;
+          this.viewportObserver.disconnect();
+          this.cachedVisibleImages = allImages;
+        }
+
+        if (this.sequentialMode) {
+          if (unloadedCount === 0 && this.loadingImages.size === 0) {
+            this.cachedVisibleImages = null;
+            this.viewportObserver.disconnect();
+            return;
+          }
+
+          // Keep 2 images loading at all times
+          const slotsAvailable = this.maxConcurrentLoads - this.loadingImages.size;
+          if (slotsAvailable > 0) {
+            const nextImages = this.getNextUnloadedImages(slotsAvailable);
+            nextImages.forEach(img => this.loadImage(img));
+          }
+        }
+      }
+    }
+
     class ResponsiveGallery {
       constructor() {
+        this.lazyLoader = new LazyLoader();
         this.setupColumns();
       }
 
@@ -290,28 +504,31 @@
           img.id = `img-${columnId}-${id}`;
           img.style.transitionDelay = `${index * 0.08}s`;
           column.appendChild(img);
+
+          this.lazyLoader.observeImage(img);
         });
       }
 
       createImageElement(imageData) {
         const img = document.createElement('img');
-        img.className = 'gallery-image lazyload';
+        img.className = 'gallery-image';
         img.alt = imageData.title;
-        img.setAttribute('data-sizes', 'auto');
-        img.setAttribute(
-          'data-srcset',
+        img.setAttribute('data-srcset',
           imageData.sizes.map(s => `images/${imageData.id}_${s}.avif ${s}w`).join(', ')
         );
         img.setAttribute('data-src', `images/${imageData.id}_${imageData.sizes[0]}.avif`);
         if (imageData.width && imageData.height) {
           img.width = imageData.width;
           img.height = imageData.height;
+          img.style.aspectRatio = `${imageData.width} / ${imageData.height}`;
         }
         /* transparent placeholder so we get the right width before js kicks in */
         img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
         return img;
       }
     }
+
+    new ModalManager('#about-link', '#about-overlay');
 
     document.addEventListener('DOMContentLoaded', () => {
       new ResponsiveGallery();
