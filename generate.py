@@ -8,6 +8,7 @@ import requests
 import subprocess
 from selectolax.parser import HTMLParser
 from collections import namedtuple
+from multiprocessing import Pool, cpu_count
 
 CACHE_FILE = "image_titles_cache.json"
 IMG_DIR = "images"
@@ -106,6 +107,10 @@ def _resize(src, dest, width, danger_of_banding=False):
             "0",
             "--yuv",
             "420",
+            "--advanced",
+            "enable-qm=1",
+            "-j",
+            "1",
             tmp_png,
             dest,
         ],
@@ -132,19 +137,18 @@ def get_flickr_image(url, danger_of_banding=False):
         meta.update({"title": title, "width": w, "height": h})
         cache[pid] = meta
         _save_cache(cache)
-        for w_out in missing:
-            _resize(tmp, sizes[str(w_out)], w_out, danger_of_banding)
-        os.remove(tmp)
 
-    return FlickrImageData(
-        title=meta["title"],
-    )
+        # Return resize jobs for later parallel processing
+        return (FlickrImageData(title=meta["title"]), tmp, sizes, missing, danger_of_banding)
+
+    return (FlickrImageData(title=meta["title"]), None, None, None, None)
 
 
 def _generate_image_data(item):
     """Generate structured data for a single image"""
     danger_of_banding = item.get("danger_of_banding", False)
-    data = get_flickr_image(item["flickr"], danger_of_banding)
+    result = get_flickr_image(item["flickr"], danger_of_banding)
+    data, tmp, sizes, missing, danger = result
     pid = _photo_id(item["flickr"])
     cache = _load_cache()
     meta = cache.get(pid, {})
@@ -155,16 +159,36 @@ def _generate_image_data(item):
         "sizes": IMG_WIDTHS,
         "width": meta.get("width"),
         "height": meta.get("height"),
+        "resize_job": (tmp, sizes, missing, danger) if tmp else None,
     }
 
 
 def build_gallery(content):
     """Generate a JSON data structure for all images"""
     images = []
+    resize_jobs = []
 
+    # First pass: download and prepare all images
     for item in content["items"]:
         image_data = _generate_image_data(item)
+        if image_data["resize_job"]:
+            tmp, sizes, missing, danger = image_data["resize_job"]
+            for w_out in missing:
+                resize_jobs.append((tmp, sizes[str(w_out)], w_out, danger))
+        del image_data["resize_job"]
         images.append(image_data)
+
+    # Second pass: resize all in parallel
+    if resize_jobs:
+        print(f"Processing {len(resize_jobs)} resize jobs in parallel...")
+        with Pool(cpu_count()) as pool:
+            pool.starmap(_resize, resize_jobs)
+
+        # Clean up source files
+        source_files = set(job[0] for job in resize_jobs)
+        for src_file in source_files:
+            if os.path.exists(src_file):
+                os.remove(src_file)
 
     js_content = f"""
 <div id="gallery-one-col" class="gallery layout-one-col">
