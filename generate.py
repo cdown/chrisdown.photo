@@ -66,7 +66,7 @@ def _dimensions(path):
 
 
 def _resize(src, dest, width, danger_of_banding=False):
-    quality = "95" if danger_of_banding else "85"
+    quality = "68" if danger_of_banding else "55"
     # If there's a danger of banding we do two things to try to mitigate it,
     # since we can't use 16-bit AVIF due to 8-bit rendering pipeline in
     # browsers:
@@ -77,6 +77,7 @@ def _resize(src, dest, width, danger_of_banding=False):
         ["-attenuate", "0.04", "+noise", "Gaussian"] if danger_of_banding else []
     )
 
+    tmp_png = dest.replace(".avif", "_tmp.png")
     cmd = [
         "magick",
         src,
@@ -84,8 +85,6 @@ def _resize(src, dest, width, danger_of_banding=False):
         "-strip",
         "-colorspace",
         "sRGB",
-        "-quality",
-        quality,
         "-resize",
         str(width),
     ]
@@ -93,9 +92,27 @@ def _resize(src, dest, width, danger_of_banding=False):
     if noise_args:
         cmd.extend(noise_args)
 
-    cmd.append(dest)
-
+    cmd.append(tmp_png)
     subprocess.run(cmd, check=True)
+
+    # ImageMagick's AVIF encoder is pretty limited, --speed and --yuv help a
+    # lot with file size.
+    subprocess.run(
+        [
+            "avifenc",
+            "-q",
+            quality,
+            "--speed",
+            "0",
+            "--yuv",
+            "420",
+            tmp_png,
+            dest,
+        ],
+        check=True,
+    )
+
+    os.remove(tmp_png)
 
 
 def get_flickr_image(url, danger_of_banding=False):
