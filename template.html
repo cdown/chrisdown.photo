@@ -264,6 +264,7 @@
         this.maxConcurrentLoads = 2;
         this.cachedVisibleImages = null;
         this.layoutObserver = null;
+        this.isFirefox = navigator.userAgent.includes('Firefox');
 
         // Load images in viewport + 50% more viewport height simultaneously
         this.viewportObserver = new IntersectionObserver(
@@ -366,7 +367,8 @@
           if (!this.loadedImages.has(img)) {
             // Set the cached larger image
             const reuseSize = imageData.sizes.find(s => s >= maxLoadedSize) || imageData.sizes[imageData.sizes.length - 1];
-            img.src = `images/${imageId}_${reuseSize}.avif`;
+            const ext = this.isFirefox ? 'jpg' : 'avif';
+            img.src = `images/${imageId}_${reuseSize}.${ext}`;
             img.classList.add('lazyloaded');
             this.loadedImages.add(img);
             this.checkAndLoad();
@@ -380,7 +382,20 @@
         }
 
         this.loadingImages.add(img);
-        img.src = `images/${imageId}_${optimalSize}.avif`;
+        // Firefox, what the fuck?
+        //
+        // - Set CICP metadata (1/13/6)? Washed out.
+        // - Embed ICC profiles? Still washed out.
+        // - Force 8-bit depth instead of 10-bit? Nope, still washed out.
+        // - Switch to RGB encoding (matrix coefficients = 0) to completely
+        //   avoid YUV conversion artifacts? STILL WASHED OUT.
+        //
+        // Meanwhile Chrome renders the exact same AVIF files perfectly. At
+        // this point I give up. Firefox gets JPEGs like it's 2005. Maybe one
+        // day Mozilla will fix their colour management pipeline, but I'm not
+        // holding my breath.
+        const ext = this.isFirefox ? 'jpg' : 'avif';
+        img.src = `images/${imageId}_${optimalSize}.${ext}`;
 
         const handleLoad = () => {
           this.loadingImages.delete(img);

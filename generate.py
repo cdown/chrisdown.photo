@@ -96,7 +96,7 @@ def _resize(src, dest, width, danger_of_banding=False):
     cmd.append(tmp_png)
     subprocess.run(cmd, check=True)
 
-    # cavif uses rav1e which supports RGB encoding natively
+    # Generate AVIF using cavif with RGB encoding
     subprocess.run(
         [
             "cavif",
@@ -112,6 +112,21 @@ def _resize(src, dest, width, danger_of_banding=False):
             tmp_png,
             "--output",
             dest,
+        ],
+        check=True,
+    )
+
+    # Generate JPEG fallback for Firefox due to colour management issues with
+    # AVIF. Sigh...
+    jpeg_dest = dest.replace(".avif", ".jpg")
+    jpeg_quality = "90" if danger_of_banding else "85"
+    subprocess.run(
+        [
+            "magick",
+            tmp_png,
+            "-quality",
+            jpeg_quality,
+            jpeg_dest,
         ],
         check=True,
     )
