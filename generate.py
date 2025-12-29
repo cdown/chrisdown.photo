@@ -141,7 +141,13 @@ def get_flickr_image(url, danger_of_banding=False):
         _save_cache(cache)
 
         # Return resize jobs for later parallel processing
-        return (FlickrImageData(title=meta["title"]), tmp, sizes, missing, danger_of_banding)
+        return (
+            FlickrImageData(title=meta["title"]),
+            tmp,
+            sizes,
+            missing,
+            danger_of_banding,
+        )
 
     return (FlickrImageData(title=meta["title"]), None, None, None, None)
 
@@ -165,8 +171,33 @@ def _generate_image_data(item):
     }
 
 
+def _build_image_html(pid, meta, index):
+    """Generate HTML for a single image element"""
+    aspect_ratio = f"{meta['width']} / {meta['height']}"
+    return f"""<img class="gallery-image"
+         data-image-id="{pid}"
+         alt="{meta['title']}"
+         width="{meta['width']}"
+         height="{meta['height']}"
+         style="aspect-ratio:{aspect_ratio};transition-delay:{index * 0.08}s"
+         src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">"""
+
+
+def _build_column_html(image_ids, cache, column_id):
+    """Generate HTML for a column of images"""
+    images_html = []
+    for index, item in enumerate(image_ids):
+        pid = _photo_id(item["flickr"])
+        if pid not in cache:
+            continue
+        meta = cache[pid]
+        images_html.append(_build_image_html(pid, meta, index))
+
+    return f'<div class="column" id="{column_id}">{"".join(images_html)}</div>'
+
+
 def build_gallery(content):
-    """Generate a JSON data structure for all images"""
+    """Generate server-rendered HTML gallery with all images"""
     images = []
     resize_jobs = []
 
@@ -192,42 +223,46 @@ def build_gallery(content):
             if os.path.exists(src_file):
                 os.remove(src_file)
 
-    js_content = f"""
+    cache = _load_cache()
+
+    one_col_html = _build_column_html(
+        content["layouts"]["one_col"], cache, "one-col-container"
+    )
+
+    two_col_html = _build_column_html(
+        content["layouts"]["two_col"]["col1"], cache, "two-col-1"
+    ) + _build_column_html(content["layouts"]["two_col"]["col2"], cache, "two-col-2")
+
+    three_col_html = (
+        _build_column_html(
+            content["layouts"]["three_col"]["col1"], cache, "three-col-1"
+        )
+        + _build_column_html(
+            content["layouts"]["three_col"]["col2"], cache, "three-col-2"
+        )
+        + _build_column_html(
+            content["layouts"]["three_col"]["col3"], cache, "three-col-3"
+        )
+    )
+
+    gallery_html = f"""
 <div id="gallery-one-col" class="gallery layout-one-col">
-  <div class="column" id="one-col-container"></div>
+  {one_col_html}
 </div>
 
 <div id="gallery-two-col" class="gallery layout-two-col">
-  <div class="column" id="two-col-1"></div>
-  <div class="column" id="two-col-2"></div>
+  {two_col_html}
 </div>
 
 <div id="gallery-three-col" class="gallery layout-three-col">
-  <div class="column" id="three-col-1"></div>
-  <div class="column" id="three-col-2"></div>
-  <div class="column" id="three-col-3"></div>
+  {three_col_html}
 </div>
 
 <script>
-const GALLERY_IMAGES = {json.dumps(images)};
-
-const LAYOUT_CONFIG = {{
-  one_col: {{
-    images: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["one_col"]])}
-  }},
-  two_col: {{
-    col1: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["two_col"]["col1"]])},
-    col2: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["two_col"]["col2"]])}
-  }},
-  three_col: {{
-    col1: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["three_col"]["col1"]])},
-    col2: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["three_col"]["col2"]])},
-    col3: {json.dumps([_photo_id(item["flickr"]) for item in content["layouts"]["three_col"]["col3"]])}
-  }}
-}};
+const IMAGE_SIZES = {json.dumps(IMG_WIDTHS)};
 </script>
 """
-    return js_content
+    return gallery_html
 
 
 def build_about(about_block):

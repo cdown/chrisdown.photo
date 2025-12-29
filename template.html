@@ -290,6 +290,7 @@
         this.cachedVisibleImages = null;
         this.layoutObserver = null;
         this.isFirefox = navigator.userAgent.includes('Firefox');
+        this.imageSizes = IMAGE_SIZES; // From server
 
         // Load images in viewport + 50% more viewport height simultaneously
         this.viewportObserver = new IntersectionObserver(
@@ -298,6 +299,13 @@
         );
 
         this.setupLayoutObserver();
+        this.initExistingImages();
+      }
+
+      initExistingImages() {
+        // Observe all pre-rendered images
+        const images = this.getVisibleImages();
+        images.forEach(img => this.viewportObserver.observe(img));
       }
 
       setupLayoutObserver() {
@@ -368,37 +376,31 @@
         });
       }
 
-      observeImage(img) {
-        if (!this.sequentialMode) {
-          this.viewportObserver.observe(img);
-        }
-      }
-
-      calculateOptimalSize(img, imageData) {
+      calculateOptimalSize(img) {
+        const imageId = img.dataset.imageId;
         const elementWidth = img.getBoundingClientRect().width;
         const devicePixelRatio = window.devicePixelRatio || 1;
         const zoomScale = window.visualViewport ? window.visualViewport.scale : 1;
         const targetWidth = Math.ceil(elementWidth * devicePixelRatio * zoomScale);
-        return imageData.sizes.find(s => s >= targetWidth) || imageData.sizes[imageData.sizes.length - 1];
+        return this.imageSizes.find(s => s >= targetWidth) || this.imageSizes[this.imageSizes.length - 1];
       }
 
       ensureImageLoaded(img, forceUpgrade = false) {
         const imageId = img.dataset.imageId;
-        const imageData = GALLERY_IMAGES.find(i => i.id === imageId);
 
-        if (!imageData) {
-          console.warn(`Image data not found for id: ${imageId}`);
+        if (!imageId) {
+          console.warn('Image missing data-image-id attribute');
           return false;
         }
 
         const maxLoadedSize = this.imageMaxSizes.get(imageId) || 0;
-        const optimalSize = this.calculateOptimalSize(img, imageData);
+        const optimalSize = this.calculateOptimalSize(img);
 
         // Already loaded at sufficient or larger size
         if (maxLoadedSize >= optimalSize && !forceUpgrade) {
           if (!this.loadedImages.has(img)) {
             // Set the cached larger image
-            const reuseSize = imageData.sizes.find(s => s >= maxLoadedSize) || imageData.sizes[imageData.sizes.length - 1];
+            const reuseSize = this.imageSizes.find(s => s >= maxLoadedSize) || this.imageSizes[this.imageSizes.length - 1];
             const ext = this.isFirefox ? 'jpg' : 'avif';
             img.src = `images/${imageId}_${reuseSize}.${ext}`;
 
@@ -425,7 +427,7 @@
         // we load the larger one in the background. This prevents blank images
         // on layout changes or when upgrading sizes.
         if (maxLoadedSize > 0 && !this.loadedImages.has(img)) {
-          const reuseSize = imageData.sizes.find(s => s >= maxLoadedSize) || imageData.sizes[imageData.sizes.length - 1];
+          const reuseSize = this.imageSizes.find(s => s >= maxLoadedSize) || this.imageSizes[this.imageSizes.length - 1];
           const ext = this.isFirefox ? 'jpg' : 'avif';
           img.src = `images/${imageId}_${reuseSize}.${ext}`;
 
@@ -567,65 +569,10 @@
       }
     }
 
-    class ResponsiveGallery {
-      constructor() {
-        this.lazyLoader = new LazyLoader();
-        this.setupColumns();
-      }
-
-      setupColumns() {
-        this.setupColumnLayout('one-col-container', LAYOUT_CONFIG.one_col.images);
-        this.setupColumnLayout('two-col-1', LAYOUT_CONFIG.two_col.col1);
-        this.setupColumnLayout('two-col-2', LAYOUT_CONFIG.two_col.col2);
-        this.setupColumnLayout('three-col-1', LAYOUT_CONFIG.three_col.col1);
-        this.setupColumnLayout('three-col-2', LAYOUT_CONFIG.three_col.col2);
-        this.setupColumnLayout('three-col-3', LAYOUT_CONFIG.three_col.col3);
-      }
-
-      setupColumnLayout(columnId, imageIds) {
-        const column = document.getElementById(columnId);
-        if (!column) {
-          console.warn(`Column element not found: ${columnId}`);
-          return;
-        }
-
-        column.innerHTML = '';
-        imageIds.forEach((id, index) => {
-          const imageData = GALLERY_IMAGES.find(img => img.id === id);
-          if (!imageData) {
-            console.warn(`Image data not found: ${id}`);
-            return;
-          }
-
-          const img = this.createImageElement(imageData);
-          img.dataset.imageId = id;
-          img.id = `img-${columnId}-${id}`;
-          img.style.transitionDelay = `${index * 0.08}s`;
-          column.appendChild(img);
-
-          this.lazyLoader.observeImage(img);
-        });
-      }
-
-      createImageElement(imageData) {
-        const img = document.createElement('img');
-        img.className = 'gallery-image';
-        img.alt = imageData.title;
-        if (imageData.width && imageData.height) {
-          img.width = imageData.width;
-          img.height = imageData.height;
-          img.style.aspectRatio = `${imageData.width} / ${imageData.height}`;
-        }
-        /* transparent placeholder so we get the right width before js kicks in */
-        img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
-        return img;
-      }
-    }
-
     new ModalManager('#about-link', '#about-overlay');
 
     document.addEventListener('DOMContentLoaded', () => {
-      new ResponsiveGallery();
+      new LazyLoader();
     });
   </script>
 
