@@ -179,7 +179,7 @@ def _build_image_html(pid, meta, index):
          alt="{meta['title']}"
          width="{meta['width']}"
          height="{meta['height']}"
-         style="aspect-ratio:{aspect_ratio};transition-delay:{index * 0.08}s"
+         style="aspect-ratio:{aspect_ratio}"
          src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">"""
 
 
