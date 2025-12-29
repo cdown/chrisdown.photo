@@ -110,10 +110,10 @@
       opacity: 1;
       transform: translateY(0);
       will-change: auto;
-      transition: box-shadow 0.3s ease-out;
     }
     .gallery-image.lazyloaded:hover {
       box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      transition: opacity 0.4s ease-out, transform 0.4s ease-out, box-shadow 0.3s ease-out;
     }
 
     dialog.about-overlay {
@@ -376,7 +376,15 @@
             const reuseSize = imageData.sizes.find(s => s >= maxLoadedSize) || imageData.sizes[imageData.sizes.length - 1];
             const ext = this.isFirefox ? 'jpg' : 'avif';
             img.src = `images/${imageId}_${reuseSize}.${ext}`;
+
+            // Disable transitions temporarily to prevent animation on layout change
+            img.style.transition = 'none';
             img.classList.add('lazyloaded');
+
+            // Force reflow and re-enable transitions
+            img.offsetHeight;
+            img.style.transition = '';
+
             this.loadedImages.add(img);
             this.checkAndLoad();
           }
