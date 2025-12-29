@@ -254,6 +254,31 @@
       }
     }
 
+    /* This handles all the image loading for the gallery. The basic idea is to load
+     * everything visible immediately, then sequentially load the rest so the layout
+     * doesn't jump around as images pop in.
+     *
+     * Loading works in two phases:
+     *   1. Batch load everything in viewport + 50% below at once
+     *   2. Then load remaining images top-to-bottom, 2 at a time
+     *
+     * We disconnect the IntersectionObserver during sequential loading so scrolling
+     * doesn't mess with the load order.
+     *
+     * Animations only play on initial load (fade in + slide up). On layout changes,
+     * we show already-loaded images instantly without animating. This is done by
+     * temporarily setting transition:none when adding the lazyloaded class.
+     *
+     * Each image tracks the largest size we've ever loaded for it. We never load a
+     * smaller version even if the layout shrinks, just keep showing the big one.
+     * We do upgrade to larger sizes when needed though (window resize, zoom, layout
+     * change to wider columns). Be careful to consider devicePixelRatio and
+     * visualViewport.
+     *
+     * Firefox gets JPEGs instead of AVIF because its rendering is diabolical.
+     *
+     * All images have aspect-ratio set to prevent layout shifts as they load.
+     */
     class LazyLoader {
       constructor() {
         this.loadingImages = new Set();
