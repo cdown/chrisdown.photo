@@ -44,6 +44,8 @@ items:
   - &merg
     flickr: https://www.flickr.com/photos/chrisdown/55010401919
     danger_of_banding: true
+  - &ghtan
+    flickr: https://www.flickr.com/photos/chrisdown/55012197956
 
 layouts:
   one_col:
@@ -53,8 +55,9 @@ layouts:
     - *merg
     - *dartford
     - *weaver
-    - *bufflehead
+    - *ghtan
     - *grouse
+    - *bufflehead
     - *parula
     - *honeycreeper
     - *vulture
@@ -78,6 +81,7 @@ layouts:
       - *vulture
       - *grouse
       - *crane
+      - *kingfisher
       - *se_owl
       - *puffin_yellow
       - *heron
@@ -87,9 +91,9 @@ layouts:
       - *owl
       - *dartford
       - *weaver
+      - *ghtan
       - *puffin_calling
       - *parula
-      - *kingfisher
       - *flamingo
       - *ibis
       - *flowerpecker
@@ -115,6 +119,7 @@ layouts:
     col3:
       - *owl
       - *grouse
+      - *ghtan
       - *crane
       - *se_owl
       - *parrot
