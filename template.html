@@ -421,6 +421,25 @@
           return false; // Already loading
         }
 
+        // If we have a smaller size already loaded, show it immediately while
+        // we load the larger one in the background. This prevents blank images
+        // on layout changes or when upgrading sizes.
+        if (maxLoadedSize > 0 && !this.loadedImages.has(img)) {
+          const reuseSize = imageData.sizes.find(s => s >= maxLoadedSize) || imageData.sizes[imageData.sizes.length - 1];
+          const ext = this.isFirefox ? 'jpg' : 'avif';
+          img.src = `images/${imageId}_${reuseSize}.${ext}`;
+
+          // Disable transitions temporarily to prevent animation on layout change
+          img.style.transition = 'none';
+          img.classList.add('lazyloaded');
+
+          // Force reflow and re-enable transitions
+          img.offsetHeight;
+          img.style.transition = '';
+
+          this.loadedImages.add(img);
+        }
+
         this.loadingImages.add(img);
         // Firefox, what the fuck?
         //
