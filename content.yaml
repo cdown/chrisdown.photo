@@ -46,6 +46,8 @@ items:
     danger_of_banding: true
   - &ghtan
     flickr: https://www.flickr.com/photos/chrisdown/55012197956
+  - &crim
+    flickr: https://www.flickr.com/photos/chrisdown/55023645414
 
 layouts:
   one_col:
@@ -69,6 +71,7 @@ layouts:
     - *se_owl
     - *ibis
     - *heron
+    - *crim
     - *flowerpecker
     - *puffin_yellow
 
@@ -96,6 +99,7 @@ layouts:
       - *parula
       - *flamingo
       - *ibis
+      - *crim
       - *flowerpecker
 
   three_col:
@@ -107,6 +111,7 @@ layouts:
       - *kingfisher
       - *puffin_yellow
       - *heron
+      - *crim
     col2:
       - *toucan
       - *dartford
